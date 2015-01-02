@@ -1,0 +1,8 @@
+name = Drupal Commerce 3D Secure Support
+description = Adds an additional checkout step for payment gateways that support 3D Secure
+dependencies[] = commerce
+dependencies[] = commerce_order
+dependencies[] = commerce_payment
+files[] = commerce_3d_secure.rules.inc
+package = Commerce - Payment
+core = 7.x

@@ -1,0 +1,234 @@
+<?php
+/**
+ * @file
+ * Drupal needs this blank file.
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function ulearn_civicrm_menu() {
+  $items = array();
+  $items['admin/config/ulearn/civicrm'] = array(
+    'title' => 'CiviCRM settings',
+    'description' => 'Configure CiviCRM settings for ULearn.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ulearn_civicrm_admin_settings_form'),
+    'access arguments' => array('administer ulearn'),
+    'file' => 'ulearn_civicrm.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_commerce_civicrm_params().
+ */
+function ulearn_civicrm_commerce_civicrm_params(&$params, $order, $cid) {
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+  $profile = $order_wrapper->commerce_customer_billing->value();
+  $profile_wrapper = entity_metadata_wrapper('commerce_customer_profile', $profile);
+  $phone = $profile_wrapper->field_user_phone->value();
+	if (civicrm_initialize()) {
+    $params['phone'] = array(
+      array(
+        'location_type_id' => 1,
+        'phone' => $phone,
+        'is_primary' => 1,
+        'phone_type_id' => 2,
+	  	)
+    );
+    $params['id'] = $params['contact_id'];
+    $contact = civicrm_api3('contact', 'update', $params);
+  }
+}
+
+/**
+ * Implements hook_commerce_civicrm_contribution_params().
+ */
+function ulearn_civicrm_commerce_civicrm_contribution_params(&$params, $order, $cid) {
+  // TODO Split this function by creating APIs.
+  // You can grab the order wrapper like so.
+  $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+
+  // Check if rule to add registration fee per line item is active.
+  $rules_config = rules_config_load('rules_apply_registration_fee');
+  $registration_fee = 0;
+  if ($rules_config->active) {
+    // TODO Get this amount in rules action config. Currently not able to get
+    // action configuration in loops.
+    $registration_fee = 5000; // As configured in rule.
+  }
+  if (civicrm_initialize()) {
+    foreach ($order_wrapper->commerce_line_items as $i => $line_item_wrapper) {
+      if (isset($line_item_wrapper->commerce_product)) {
+        $amount = $line_item_wrapper->commerce_total->amount->value();
+
+        $financial_type_id = variable_get('commerce_civicrm_contribution_type', '');
+
+        // Registration fee for accommodation.
+        if ($line_item_wrapper->type->value() == 'accommodation') {
+          $registration_fee = 6500;
+          // Contribution type is set to 'Accomm' only for accommodations.
+          $financial_type_id = 7;
+        }
+
+        // Add registration fee here.
+        $amount += $registration_fee;
+
+        $currency_code = $line_item_wrapper->commerce_total->currency_code->value();
+        $amount = commerce_currency_amount_to_decimal($amount, $currency_code);
+
+        $txn_id = time() . '_' . rand(1000, 9999);
+
+        // Format for source and notes: 'SKU , PRICE'.
+        $notes = $line_item_wrapper->commerce_product->sku->value() . ' , ' . $amount;
+
+        // Get order state.
+        $order_status = commerce_order_status_load($order_wrapper->status->value());
+        // Get contribution status from configured mappings.
+        $contribution_state = variable_get('ulearn_civicrm_status_mapping_order_state_' . $order_status['state'], 1);
+
+        // Get order payment method.
+        list($method_id, $payment_rule) = explode('|', $order->data['payment_method']);
+        // Get payment instrument from configured mappings.
+        $payment_instrument = variable_get('ulearn_civicrm_payment_mapping_payment_method_' . $method_id, 6);
+
+        // Create contribution..
+        if (in_array($line_item_wrapper->commerce_product->type->value(), ulearn_civicrm_product_types())) {
+          $contribution_params = array(
+            'contact_id' => $cid,
+            'receive_date' => date('Ymd'),
+            'total_amount' => $amount,
+            'financial_type_id' => $financial_type_id,
+            'payment_instrument_id' => $payment_instrument,
+            'net_amount' => $amount,
+            'trxn_id' => $txn_id,
+            'currency' => $currency_code,
+            'source' => $notes,
+            'contribution_status_id' => $contribution_state,
+            'note' => $notes,
+          );
+          $contribution = civicrm_api3('Contribution', 'create', $contribution_params);
+
+          // Create memberships.
+          if (in_array($line_item_wrapper->commerce_product->type->value(), ulearn_civicrm_product_types('membership')) && !empty($contribution['id'])) {
+            $contribution_id = $contribution['id'];
+
+            $product_id = $line_item_wrapper->commerce_product->product_id->value();
+
+            // Get the dates. We will need to load line item here since dates are
+            // in data of line item which is not accessible from metadata wrapper.
+            $line_item = commerce_line_item_load($line_item_wrapper->line_item_id->value());
+
+            // Membership type for course.
+            $membership_type_id = variable_get('ulearn_civicrm_membership_type', 2);
+            // Acitivity subject.
+            $activity_subject = 'Course';
+            // Calculate start date and end date for Course.
+            if ($line_item_wrapper->type->value() == 'general_courses') {
+              $start_date = $line_item->data['ulearn_course_week_options'][$product_id]['start_date'];
+              $end_date = $line_item->data['ulearn_course_week_options'][$product_id]['end_date'];
+
+              $courses_config = variable_get('ulearn_courses', array());
+              $friday = $courses_config['ulearn_course_week_end_friday'];
+              if ($friday) {
+                $end_date = strtotime('-3 days', $end_date);
+              }
+            }
+
+            // Calculate start date and end date for accommodation.
+            if ($line_item_wrapper->type->value() == 'accommodation') {
+              $start_date = $line_item_wrapper->field_accommodation_dates->value();
+              $weeks_selected = (int) $line_item_wrapper->quantity->value();
+              $end_date = strtotime('+ ' . $weeks_selected . ' weeks', $start_date);
+              // Get membership as configured in accommodation.
+              $membership_type_id = $line_item_wrapper->commerce_product->field_equivalent_membership_type->value();
+              if (empty($membership_type_id)) {
+                // Make default as 5.
+                $membership_type_id = 5;
+              }
+              $activity_subject = 'Accommmodation';
+            }
+
+            // Calculate start date and end for special course.
+            if ($line_item_wrapper->type->value() == 'special_courses') {
+              $start_date = $line_item_wrapper->field_batch_start_date->value();
+              $pricing_attributes = $line_item_wrapper->commerce_pricing_attributes->value();
+              $weeks_selected = $pricing_attributes['week_options']['field_course_week_options'];
+              $end_date = strtotime('+ ' . $weeks_selected . ' weeks', $start_date);
+              $activity_subject = 'Special course';
+            }
+
+            $membership_params = array(
+              'contact_id' => $cid,
+              'membership_type_id' => $membership_type_id,
+              'join_date' => date('Ymd', $start_date),
+              'start_date' => date('Ymd', $start_date),
+              'end_date' => date('Ymd', $end_date),
+              'source' => $line_item->line_item_label,
+              'is_override' => 1,
+              'status_id' => variable_get('ulearn_civicrm_membership_status', 2),
+            );
+            $membership_result = civicrm_api3('membership', 'create', $membership_params);
+
+            // Create membership payment.
+            if (!empty($membership_result['id'])) {
+              $membership_id = $membership_result['id'];
+              $payment_params = array(
+                'contribution_id' => $contribution_id,
+                'membership_id' => $membership_id,
+              );
+              $payment_result = civicrm_api3('membership_payment', 'create', $payment_params);
+            }
+
+            // Create an activity for contact.
+            $activity_params = array(
+              'source_contact_id' => $cid,
+              'activity_type_id' => variable_get('ulearn_civicrm_activity_type', 2),
+              'subject' => $activity_subject,
+              'activity_date_time' => date('Ymd', $start_date),
+              'status_id' => variable_get('ulearn_civicrm_activity_status', 1),
+              'priority_id' => variable_get('ulearn_civicrm_activity_priority', 2),
+              'is_current_revision ' => 1,
+            );
+            $activity_result = civicrm_api3('activity', 'create', $activity_params);
+          }
+        }
+      }
+    }
+  }
+  // Unset required parameter to skip contribution
+  // created by commerce_civicrm module.
+  unset($params['contact_id']);
+}
+
+/**
+ * Get configured commerce product types.
+ */
+function ulearn_civicrm_product_types($type = 'contribution') {
+  $types = array();
+  if ($type == 'membership') {
+    $product_types = variable_get('ulearn_civicrm_membership_product_types', array('course' => 'course', 'accommodation' => 'accommodation'));
+  }
+  else {
+    $product_types = variable_get('ulearn_civicrm_product_types', array('accommodation' => 'accommodation', 'course' => 'course'));
+  }
+  foreach ($product_types as $key => $value) {
+    if (!empty($value)) {
+      $types[] = $value;
+    }
+  }
+  return $types;
+}
+
+/**
+ * CiviCRM membership options.
+ */
+function ulearn_civicrm_membership_types_options() {
+  $options = array();
+  if (civicrm_initialize()) {
+    module_load_include('inc', 'ulearn_civicrm', 'ulearn_civicrm.admin');
+    $options = ulearn_civicrm_membership_types();
+  }
+  return $options;
+}

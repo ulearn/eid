@@ -1,0 +1,224 @@
+<?php
+
+/**
+ * @file
+ * Migrate content from Ulearn (D6) to ULearn (D7).
+ */
+
+define('ULEARN_MIGRATE_DATABASE_NAME', variable_get('ulearn_migrate_database_name', ''));
+define('ULEARN_MIGRATE_DATABASE_USER', variable_get('ulearn_migrate_database_user', ''));
+define('ULEARN_MIGRATE_DATABASE_PASS', variable_get('ulearn_migrate_database_pass', ''));
+define('ULEARN_MIGRATE_DATABASE_HOST', variable_get('ulearn_migrate_database_host', 'localhost'));
+define('ULEARN_MIGRATE_DATABASE_PORT', variable_get('ulearn_migrate_database_port', ''));
+define('ULEARN_MIGRATE_SERVER_URL', variable_get('ulearn_migrate_server_url', ''));
+
+/**
+ * Implementation of hook_menu().
+ */
+function ulearn_migrate_menu() {
+  $items = array();
+  $items['admin/config/ulearn/ulearn-migrate'] = array(
+    'title' => 'ULearn Migration',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ulearn_migrate_config_form'),
+    'access arguments' => array('administer ulearn'),
+    'file' => 'ulearn_migrate.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_migrate_api().
+ */
+function ulearn_migrate_migrate_api() {
+  $api = array(
+    'api' => 2,
+    'migrations' => array(
+      'ulearnMigratePage' => array('class_name' => 'ulearnMigratePage'),
+      'ulearnMigrateBlockCustom' => array('class_name' => 'ulearnMigrateBlockCustom'),
+    ),
+  );
+  return $api;
+}
+
+/**
+ * Extended migration class for our migration.
+ * We will add database connection here
+ * so we can use it in our migrations.
+ */
+class ulearnMigrate extends Migration {
+  public function __construct() {
+    parent::__construct();
+    // Get default d6 database as configured.
+    $other_database = ulearn_migrate_default_d6_database();
+    // Add database connection info.
+    Database::addConnectionInfo('ulearn_d6', 'default', $other_database);
+  }
+}
+
+/**
+ * Connect to D6 database.
+ */
+function ulearn_migrate_db_connect($database = array()) {
+  $default = ulearn_migrate_default_d6_database();
+  $database = $database + $default;
+
+  Database::addConnectionInfo('ulearn_d6', 'default', $database);
+
+  $return = array();
+  try {
+    $connection = Database::getConnection('default', 'ulearn_d6');
+    Database::closeConnection('default', 'ulearn_d6');
+    $return['status'] = TRUE;
+  }
+  catch (Exception $e) {
+    $return['status'] = FALSE;
+    $return['message'] = $e->getMessage();
+  }
+  return $return;
+}
+
+/**
+ * Get default D6 database connection.
+ */
+function ulearn_migrate_default_d6_database() {
+  $database = array(
+    'database' => ULEARN_MIGRATE_DATABASE_NAME,
+    'username' => ULEARN_MIGRATE_DATABASE_USER,
+    'password' => ULEARN_MIGRATE_DATABASE_PASS,
+    'host'     => ULEARN_MIGRATE_DATABASE_HOST,
+    'port'     => ULEARN_MIGRATE_DATABASE_PORT,
+    'driver'   => 'mysql',
+  );
+  return $database;
+}
+
+/**
+ * Retrieve the url alias associated with the node from the migration database.
+ */
+function ulearn_migrate_url_alias($nid) {
+  $result = Database::getConnection('default', 'ulearn_d6')
+    ->select('url_alias', 'ua')
+    ->fields('ua', array('dst'))
+    ->condition('ua.src', 'node/' . $nid, '=')
+    ->execute()
+    ->fetchObject();
+  
+  return is_object($result) && !empty($result->dst) ? $result->dst : NULL;
+}
+
+/**
+ * Retrieve the page title associated with the node from the migration database.
+ */
+function ulearn_migrate_page_title($nid) {
+  $result = Database::getConnection('default', 'ulearn_d6')
+    ->select('page_title', 'pt')
+    ->fields('pt', array('page_title'))
+    ->condition('pt.id', $nid, '=')
+    ->condition('pt.type', 'node', '=')
+    ->execute()
+    ->fetchObject();
+  
+  return is_object($result) && !empty($result->dst) ? $result->dst : NULL;
+}
+
+/**
+ * Get attached images.
+ */
+function ulearn_migrate_attached_images($nid) {
+  $images = array();
+  $query = Database::getConnection('default', 'ulearn_d6')
+    ->select('image', 'i')
+    ->fields('i', array('nid'))
+    ->condition('i.image_size', '_original', '=');
+  $query->join('image_attach', 'ia', 'i.nid = ia.iid');
+  $query->join('files', 'f', 'i.fid = f.fid');
+  $query->addField('f', 'filepath');
+  $query->addField('f', 'timestamp');
+  $query->condition('ia.nid', $nid, '=');
+  $result = $query->execute();
+
+  foreach ($result as $row) {
+    $images[] = ULEARN_MIGRATE_SERVER_URL . '/' . $row->filepath;
+  }
+  return $images;
+}
+
+/**
+ * Fetch image from source.
+ */
+function ulearn_migrate_fetch_image($src, &$content) {
+  $source_path = $src;
+  $cleanup = FALSE;
+  // Check if source is full URL.
+  $position = strpos($source_path, '://');
+  if ($position === FALSE) {
+    $source_path = ULEARN_MIGRATE_SERVER_URL . $src;
+  }
+
+  // Check if src contains ulearn.ie so we can make those URLs relative.
+  if ((strpos($src, 'www.ulearn.ie') !== FALSE) || (strpos($src, 'http://ulearn.ie') !== FALSE) || (strpos($src, 'http://www.ulearn.ie') !== FALSE)) {
+    $cleanup = TRUE;
+  }
+
+  // Now source is full URL. Cleanup the path.
+  $components = explode('/', $source_path);
+  foreach ($components as $key => $component) {
+    $components[$key] = rawurlencode($component);
+  }
+  $source_path = implode('/', $components);
+
+  // Encode the URL.
+  $source_path = str_replace(' ', '%20', $source_path);
+
+  // Actually, we don't want colons encoded.
+  $source_path = str_replace('%3A', ':', $source_path);
+
+  $new_src = '/' . conf_path() . '/files/' . drupal_basename($source_path);
+  $destination = DRUPAL_ROOT . $new_src;
+
+  // Copy the file.
+  @copy($source_path, $destination);
+
+  if ($cleanup) {
+    $new_src = $destination;
+    $content = str_replace($src, $new_src, $content);
+  }
+}
+
+/**
+ * Map the regions from D6 site theme to current theme.
+ */
+function ulearn_migrate_theme_region($region) {
+  $regions = array(
+    'headerfloat' => 'header_menu',
+    'right' => 'sidebar_right',
+    'left' => 'sidebar_left',
+    'vnavigation_right' => 'header_right',
+    'content' => 'content',
+    'navigation' => 'header_menu',
+    'sidebar' => 'sidebar_left',
+    'banner1' => 'before_content',
+    'banner2' => 'before_content',
+    'banner3' => 'before_content',
+    'banner4' => 'before_content',
+    'banner5' => 'before_content',
+    'banner6' => 'before_content',
+    'user1' => 'header_right',
+    'user2' => 'header_right',
+    'user3' => 'header_right',
+    'user4' => 'header_right',
+    'top1' => 'header_left',
+    'top2' => 'header_left',
+    'top3' => 'header_left',
+    'bottom1' => 'after_content',
+    'bottom2' => 'after_content',
+    'bottom3' => 'after_content',
+    'footer' => 'footer_bottom',
+    'footer2' => 'footer_2',
+    'footer3' => 'footer_3',
+    'clearshadow' => 'footer_bottom',
+    'copyright' => 'footer_bottom',
+  );
+  return $regions[$region];
+}

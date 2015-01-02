@@ -1,0 +1,24 @@
+<?php
+/**
+ * @file
+ * Code for the Ulearn Blog feature.
+ */
+
+include_once 'ulearn_blog.features.inc';
+
+/**
+ * Implements hook_form_FORM_ID_alter() for install_configure_form().
+ * Mark school field as mandatory for partner
+ */
+function ulearn_blog_form_blog_node_form_alter(&$form, &$form_state, $form_id) {
+  $form['#after_build'][] = 'ulearn_blog_after_build';
+}
+
+function ulearn_blog_after_build($form, &$form_state) {
+  global $user;
+  if(in_array('partner', $user->roles)) {
+    $form['field_blog_school'][LANGUAGE_NONE]['#required'] = TRUE;
+    unset($form['field_blog_school'][LANGUAGE_NONE]['#options']['_none']);
+  }
+  return $form; 
+}

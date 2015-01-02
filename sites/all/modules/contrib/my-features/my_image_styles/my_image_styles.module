@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the My Image Styles feature.
+ */
+
+include_once 'my_image_styles.features.inc';

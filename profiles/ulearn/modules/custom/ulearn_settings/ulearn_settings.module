@@ -1,0 +1,186 @@
+<?php
+/**
+ * @file
+ * Code for the ULearn Settings feature.
+ */
+
+include_once 'ulearn_settings.features.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function ulearn_settings_menu() {
+  $items = array();
+  $items['admin/config/ulearn'] = array(
+    'title' => 'ULearn',
+    'description' => 'Administer ULearn.',
+    'position' => 'right',
+    'weight' => 5,
+    'page callback' => 'system_admin_menu_block_page',
+    'access arguments' => array('access administration pages'),
+    'file' => 'system.admin.inc',
+    'file path' => drupal_get_path('module', 'system'),
+  );
+
+  $items['admin/config/ulearn/global-settings'] = array(
+    'title' => 'Global Settings',
+    'description' => 'Configure global settings for ULearn.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('ulearn_settings_admin_settings_form'),
+    'access arguments' => array('administer ulearn'),
+    'file' => 'ulearn_settings.admin.inc',
+  );
+  
+  $items['admin/config/ulearn/variables'] = array(
+    'title' => 'Variable and Email Templates',
+    'description' => 'Configure variables and email temaplates for ULearn.',
+    'page callback' => 'ulearn_settings_variables_email_settings_form',
+    'access arguments' => array('administer ulearn'),
+    'file' => 'ulearn_settings.admin.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function ulearn_settings_permission() {
+  $permissions = array(
+    'administer ulearn' => array(
+      'title' => t('Administer ULearn'),
+      'description' => t('Allows users to configure ulearn settings.'),
+      'restrict access' => TRUE,
+    ),
+  );
+  return $permissions;
+}
+
+/** 
+ * Implements hook_date_formats(). 
+ */
+function ulearn_settings_date_formats() { 
+  $formats = array();
+  $formats[] = array(
+    'type' => 'ulearn_date_format', 
+    'format' => 'l, F j, Y', 
+    'locales' => array(),
+  );
+  $formats[] = array(
+    'type' => 'short', 
+    'format' => 'l, F j, Y', 
+    'locales' => array(),
+  );
+  return $formats;
+}
+
+/**
+ * Implements hook_date_format_types().
+ */
+function ulearn_settings_date_format_types() {
+  $types = array();
+  $types['ulearn_date_format'] = t('ULearn');
+  return $types;
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function ulearn_settings_form_alter(&$form, &$form_state, $form_id) {
+  if (strpos($form_id, 'commerce_cart_add_to_cart') !== FALSE) {
+    // Change Add to cart button text.
+    $add_to_cart = variable_get('ulearn_commerce_add_to_cart_text', '');
+    if (!empty($add_to_cart)) {
+      $form['submit']['#value'] = $add_to_cart;
+    }
+  }
+}
+
+/**
+ * API
+ */
+
+/**
+ * Set default image for imagefield instance.
+ */
+function ulearn_settings_set_default_image(&$instance, $filename, $source, $destination) {
+  // See if a default image hasn't been set for this field yet
+  if (empty($instance['settings']['default_image'])) {
+    // Dynamically set the default image on the field
+    $destination = file_default_scheme() . '://' . $destination;
+    // Check to see if it exists already
+    $result = db_select('file_managed', 'f')
+      ->fields('f', array('fid'))
+      ->condition('f.uri', $destination . '/' . $filename)
+      ->execute();
+    $fid = $result->fetchField();
+    // Simulate an upload of the default image.
+    if (!$fid && file_exists($source)) {
+      $file = new stdClass;
+      $file->filename = $filename;
+      $file->timestamp = REQUEST_TIME;
+      $file->uri = $source;
+      $file->filemime = file_get_mimetype($source);
+      $file->uid = 1;
+      $file->status = 1;
+
+      file_prepare_directory($destination, FILE_CREATE_DIRECTORY);
+      $file = file_copy($file, $destination . '/' . $filename, FILE_EXISTS_REPLACE);
+
+      $fid = $file->fid;
+    }
+    $instance['settings']['default_image'] = (string) $fid;
+  }
+}
+
+/**
+ * Get difference between dates.
+ */
+function ulearn_settings_date_diff($start_date, $end_date = NULL, $skip_friday = FALSE) {
+  $output = '';
+  $output .= '<span class="date-item">';
+  $output .= format_date($start_date, 'ulearn_date_format');
+  if (!empty($end_date)) {
+    $output .= ' ' . t('to') . ' ' . format_date($end_date, 'ulearn_date_format');
+    $difference = abs($end_date - $start_date);
+    $days = floor($difference/(60*60*24));
+    $weeks = floor($days/7);
+    $remaining_days = $days - ($weeks * 7);
+    $courses_config = variable_get('ulearn_courses', array());
+    $friday = $courses_config['ulearn_course_week_end_friday'];
+    if ($friday && !$skip_friday) {
+      $weeks++;
+      $remaining_days = 0;
+    }
+    if ($weeks != 0 || $remaining_days != 0) {
+      $output .= ' (';
+    }
+    if ($weeks != 0) {
+      $output .= format_plural($weeks, '1 week', '@count weeks');
+      if ($remaining_days != 0) {
+        $output .= ' ';
+      }
+    }
+    if ($remaining_days != 0) {
+      $output .= format_plural($remaining_days, '1 day', '@count days');
+    }
+    if ($weeks != 0 || $remaining_days != 0) {
+      $output .= ')';
+    }
+  }
+  $output .= '</span>';
+  return $output;
+}
+
+/**
+ * Callback to return week options.
+ */
+function ulearn_settings_course_week_options() {
+  $courses_config = variable_get('ulearn_courses', array());
+  $weeks = !empty($courses_config['ulearn_course_weeks']) ? $courses_config['ulearn_course_weeks'] : 10;
+  $options = array();
+  for ($i = 1; $i <= $weeks; $i++) {
+    $options[] = $i;
+  }
+  return drupal_map_assoc($options);
+}

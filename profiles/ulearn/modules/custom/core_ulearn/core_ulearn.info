@@ -1,0 +1,22 @@
+name = Core Ulearn
+description = Core Ulearn
+core = 7.x
+package = Ulearn
+version = 7.x-1.0
+project = core_ulearn
+
+dependencies[] = ulearn_accommodation
+dependencies[] = ulearn_base
+dependencies[] = ulearn_commerce
+dependencies[] = ulearn_course
+dependencies[] = ulearn_profile
+;dependencies[] = ulearn_locale
+dependencies[] = ulearn_metatag
+dependencies[] = ulearn_theme
+dependencies[] = ulearn_google_analytics
+dependencies[] = ulearn_blog
+dependencies[] = ulearn_settings
+dependencies[] = ulearn_special_courses
+dependencies[] = ulearn_slideshow
+dependencies[] = ulearn_contact
+dependencies[] = ulearn_testimonials

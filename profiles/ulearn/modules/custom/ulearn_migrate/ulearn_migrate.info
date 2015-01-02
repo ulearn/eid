@@ -1,0 +1,12 @@
+name = ULearn migration
+description = Migrate content from Ulearn (D6) to ULearn (D7).
+core = 7.x
+version = 7.x-1.0
+package = Ulearn
+project = ulearn_migrate
+dependencies[] = field
+dependencies[] = migrate_ui
+dependencies[] = node
+configure = admin/config/ulearn/ulearn-migrate
+files[] = includes/node-page.inc
+files[] = includes/block-custom.inc

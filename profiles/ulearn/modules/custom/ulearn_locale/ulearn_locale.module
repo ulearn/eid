@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the ULearn Locale feature.
+ */
+
+include_once 'ulearn_locale.features.inc';

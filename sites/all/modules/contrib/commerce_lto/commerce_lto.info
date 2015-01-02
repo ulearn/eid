@@ -1,0 +1,9 @@
+name = Limited Time Offers
+description = Provides the posibility to defined prices depending on date/time restrictions.
+package = Commerce
+dependencies[] = commerce
+dependencies[] = commerce_price
+dependencies[] = date
+dependencies[] = date_api
+dependencies[] = date_popup
+core = 7.x

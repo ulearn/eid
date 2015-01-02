@@ -1,0 +1,624 @@
+<?php
+/**
+ * @file
+ * Provides the possibility to manage limited time offers.
+ *
+ * @TODO Views form field handler like for edit_quantity
+ */
+
+/**
+ * Defines the cache table name.
+ * @var string
+ */
+define('COMMERCE_LTO_CACHE_BIN', 'cache_commerce_lto');
+
+/**
+* Implements hook_menu().
+*/
+function commerce_lto_menu() {
+  $items = array();
+  $items['admin/commerce/config/lto'] = array(
+    'title' => 'Limited time offers',
+    'description' => 'Configure limited time offers',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('commerce_lto_settings_form'),
+    'access arguments' => array('configure store'),
+    'type' => MENU_NORMAL_ITEM,
+    'file path' => '',
+    'file' => 'commerce_lto.admin.inc',
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_flush_caches().
+ */
+function commerce_lto_flush_caches() {
+  // Provide our own cache bin.
+  return array(COMMERCE_LTO_CACHE_BIN);
+}
+
+/**
+ * Implements hook_help().
+ */
+function commerce_lto_help($path, $arg) {
+  switch ($path) {
+    // Main module help for the block module
+    case 'admin/commerce/config/lto':
+      return
+        '<p>' .
+      t('There are two fundamental different options for the date dependent pricing:') .
+        '<ul>' .
+          '<li>' . t('Time unit handling: Means that the customer can choose a date range for the product and the price is calculated using the available time units.') . '</li>' .
+          '<li>' . t('Price period handling : Means that you can define prices that are valid only within a defined date range.') . '</li>' .
+        '</ul>' .
+      t(
+        'As soon as one of the options is enabled a date field called ' .
+        'commerce_lto_date_range is added to the line item type ' .
+        '<a href="!config_url">product</a>.<br> You can use this field to ' .
+        'configure the default dates that should be used to calculate the ' .
+        'price as long as the user didn\'t set the prefered date range.',
+        array('!config_url' => url('admin/commerce/config/line-items/product/fields'))
+      ) .
+        '</p>';
+  }
+}
+
+/**
+* Implements hook_field_attach_form().
+*/
+function commerce_lto_field_attach_form($entity_type, $entity, &$form, &$form_state, $langcode) {
+  // Alter price widgets on the product form to.
+  if ($entity_type == 'commerce_product') {
+
+    // Get an array of price fields attached to products.
+    $enabled_fields = variable_get('commerce_lto_enabled_fields', array());
+
+    $unit_options = array_keys(_commerce_lto_get_time_units());
+    $unit_options = array_combine($unit_options, $unit_options);
+
+
+    // Loop over each child element of the form.
+    foreach (element_children($form) as $key) {
+      // If the current element is for an enabled price field...
+      if (!empty($enabled_fields[$key])) {
+        // Loop over each of its child items...
+        foreach (element_children($form[$key][$form[$key]['#language']]) as $delta) {
+
+          $element = &$form[$key][$form[$key]['#language']][$delta];
+          $element['date_prices'] = array(
+            '#tree' => TRUE,
+            '#prefix' => '<div class="time-limited-offers">',
+            '#suffix' => '<div class="clear"></div></div>',
+            '#attached' => array(
+              'css' => array(drupal_get_path('module', 'commerce_lto') . '/commerce_lto.css'),
+            ),
+          );
+
+          // Time unit handling
+          if (!empty($enabled_fields[$key]['time_unit_handling'])) {
+            // Find the default value for the tax included element.
+            $default_time_unit = '';
+
+            if (!empty($element['data']['#default_value']['date_prices']['unit'])) {
+              $default_time_unit = $element['data']['#default_value']['date_prices']['unit'];
+            }
+
+            $element['date_prices']['unit'] = array(
+              '#type' => 'select',
+              '#title' => t('Time unit'),
+              '#title_display' => 'before',
+              '#default_value' => $default_time_unit,
+              '#options' => $unit_options,
+            );
+          }
+
+          // Price period handling
+          if (!empty($enabled_fields[$key]['period_handling'])) {
+            // Find the default value for the tax included element.
+            $default_price_period = array(
+              'start' => '',
+              'end' => '',
+            );
+
+            if (!empty($element['data']['#default_value']['date_prices']['price_period'])) {
+              $default_price_period = $element['data']['#default_value']['date_prices']['price_period'] + $default_price_period;
+            }
+
+            if (!empty($default_price_period['start'])) {
+              $default_price_period['start'] = new DateTime($default_price_period['start']);
+              $default_price_period['start'] = $default_price_period['start']->format(DATE_FORMAT_DATETIME);
+            }
+            $element['date_prices']['price_period']['start'] = array(
+              '#type' => 'date_popup',
+              '#title' => t('Price valid from'),
+              '#title_display' => 'before',
+              '#default_value' => $default_price_period['start'],
+              '#date_format' => 'Y-m-d',
+              '#date_year_range' => '-0:+2',
+            );
+
+            if (!empty($default_price_period['end'])) {
+              $default_price_period['end'] = new DateTime($default_price_period['end']);
+              $default_price_period['end'] = $default_price_period['end']->format(DATE_FORMAT_DATETIME);
+            }
+            $element['date_prices']['price_period']['end'] = array(
+              '#type' => 'date_popup',
+              '#title' => t('Price valid to'),
+              '#title_display' => 'before',
+              '#default_value' => $default_price_period['end'],
+              '#date_format' => 'Y-m-d',
+              '#date_year_range' => '-0:+2',
+            );
+          }
+
+          // Append a validation handler to the price field's element validate
+          // array to add the price period price component after the price has
+          // been converted from a decimal.
+          $element['#element_validate'][] = 'commerce_lto_price_field_validate';
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Validate callback for the tax inclusion select list that serves to reset the
+ * data array based on the selected tax.
+ */
+function commerce_lto_price_field_validate($element, &$form_state) {
+  // Build an array of form parents to the price array.
+  $parents = $element['#parents'];
+
+  // Get the price array from the form state.
+  $price = $form_state['values'];
+
+  foreach ($parents as $parent) {
+    $price = $price[$parent];
+  }
+
+  $price['data']['components'] = array();
+
+  // If a unit handling was specified.
+  if (!empty($element['date_prices']['unit']['#value'])) {
+    $price['data']['date_prices']['unit'] = $element['date_prices']['unit']['#value'];
+  }
+  else {
+    unset($price['data']['date_prices']['unit']);
+  }
+
+  // If a period handling was specified.
+  if (!empty($element['date_prices']['price_period']['start'])
+    && count(array_filter($element['date_prices']['price_period']['start']['#value']))
+  ) {
+    $price['data']['date_prices']['price_period']['start'] = $element['date_prices']['price_period']['start']['#value']['date'];
+  }
+  else {
+    unset($price['data']['date_prices']['price_period']['start']);
+  }
+  if (!empty($element['date_prices']['price_period']['end'])
+    && count(array_filter($element['date_prices']['price_period']['end']['#value']))
+  ) {
+    $price['data']['date_prices']['price_period']['end'] = $element['date_prices']['price_period']['end']['#value']['date'];
+  }
+  else {
+    unset($price['data']['date_prices']['price_period']['end']);
+  }
+
+  // Add the data array to the form state.
+  $parents[] = 'data';
+
+  form_set_value(array('#parents' => $parents), $price['data'], $form_state);
+}
+
+/**
+ * Returns an associatove array with the field names of price fields with
+ * date support enebled.
+ *
+ * @return array();
+*/
+function commerce_lto_get_enabled_price_fields() {
+  // Get an array of price fields attached to products.
+  if ($enabled_fields = variable_get('commerce_lto_enabled_fields', array())) {
+    return array_combine(array_keys($enabled_fields), array_keys($enabled_fields));
+  }
+  return array();
+}
+
+/**
+ * Ensures that the necessary date field for the price calculation exists.
+ */
+function commerce_lto_create_line_item_date_field() {
+
+  // If a field type we know should exist isn't found, clear the field cache.
+  if (!field_info_field_types('datetime')) {
+    field_cache_clear();
+  }
+
+  // Look for or add the specified price field to the requested entity bundle.
+  $field = field_info_field('commerce_lto_date_range');
+  $instance = field_info_instance(
+    'commerce_line_item',
+    'commerce_lto_date_range',
+    'product'
+  );
+
+  // If field doesn't exist - create it.
+  if (empty($field)) {
+    $field = array(
+      'field_name' => 'commerce_lto_date_range',
+      'type' => 'datetime',
+      'cardinality' => 1,
+      'entity_types' => array(),
+      'translatable' => FALSE,
+      'entity_types' => array (),
+      'settings' => array (
+        'repeat' => 0,
+        'granularity' => array (
+          'month' => 'month',
+          'day' => 'day',
+          'hour' => 0,
+          'minute' => 0,
+          'year' => 'year',
+          'second' => 0,
+        ),
+        'tz_handling' => 'site',
+        'timezone_db' => 'UTC',
+        'todate' => 'required',
+      ),
+    );
+    field_create_field($field);
+  }
+
+  if (empty($instance)) {
+    $instance = array(
+      'field_name' => 'commerce_lto_date_range',
+      'entity_type' => 'commerce_line_item',
+      'bundle' => 'product',
+      'label' => 'Limited Time Offer Date Range',
+      'description' => 'Date range for the limited time price calculation',
+      'required' => TRUE,
+      'widget' => array (
+        'weight' => 2,
+        'type' => 'date_popup',
+        'module' => 'date',
+        'active' => 1,
+        'settings' => array (
+          'input_format' => 'm/d/Y',
+          'input_format_custom' => '',
+          'year_range' => '-0:+3',
+          'increment' => 15,
+          'label_position' => 'above',
+          'text_parts' => array (),
+          'repeat_collapsed' => 0,
+        ),
+      ),
+      'settings' => array (
+        'default_value' => 'now',
+        'default_value_code' => '',
+        'default_value2' => 'strtotime',
+        'default_value_code2' => '+7 days',
+        'user_register_form' => '',
+      ),
+      'display' => array (
+        'default' => array (
+          'label' => 'above',
+          'type' => 'date_default',
+          'settings' => array (
+            'format_type' => 'long',
+            'show_repeat_rule' => 'show',
+            'multiple_number' => '',
+            'multiple_from' => '',
+            'multiple_to' => '',
+            'fromto' => 'both',
+          ),
+          'module' => 'date',
+          'weight' => 4,
+        ),
+      ),
+      'commerce_cart_settings' => array (
+        'field_access' => TRUE,
+      ),
+    );
+    field_create_instance($instance);
+    drupal_set_message(
+      t(
+        'Created the necessary field %field_name on the line item type ' .
+        '%line_item_type. ' .
+        'You can configure it as needed <a href="!config_url">here</a>.',
+        array(
+          '%field_name' => 'commerce_lto_date_range',
+          '%line_item_type' => 'product',
+          '!config_url' => url('admin/commerce/config/line-items/product/fields/commerce_lto_date_range'),
+        )
+      ),
+      'status',
+      FALSE
+    );
+  }
+}
+
+/**
+ * Calculates the price for a duration.
+ * @param string $entity_type
+ * @param stdClass $entity
+ * @param string $field_name
+ * @param DateTime $from
+ * @param DateTime $to
+ *
+ * @return array|FALSE
+ *   Returns an array with price information or FALSE if the date range is not
+ *   covered by the price defined periods.
+ *   Array consits of array('amount'=>{price}, 'data'=>{metadata})
+ */
+function commerce_lto_calculate_price($entity, $field_name, DateTime $from, DateTime $to) {
+  static $cache_expiration;
+  $currency_code = (!empty($entity->{$field_name}[LANGUAGE_NONE][0]['currency_code'])) ? $entity->{$field_name}[LANGUAGE_NONE][0]['currency_code'] : 'UNKNOWN';
+
+  $enabled_fields = variable_get('commerce_lto_enabled_fields', array());
+  $use_period_handling = !empty($enabled_fields[$field_name]['period_handling']);
+  $period_handling_uses_current_date = ($use_period_handling && !empty($enabled_fields[$field_name]['use_now_as_date']));
+  $use_time_unit_handling = !empty($enabled_fields[$field_name]['time_unit_handling']);
+
+  if (!strlen($cache_expiration)) {
+    $cache_expiration = CACHE_TEMPORARY;
+    if (($modification = variable_get('commerce_lto_cache_expiration'))) {
+      $cache_expiration = strtotime($modification);
+    }
+  }
+
+  $cid = (($use_period_handling) ? 'date_range_price' : 'time_unit_price') . ':' .
+    $entity->product_id . ':' .
+    $field_name . ':' .
+    $from->format('U') . ':' .
+    $to->format('U') . ':' .
+    $currency_code;
+  $cache = cache_get($cid, COMMERCE_LTO_CACHE_BIN);
+  if ($cache && variable_get('commerce_lto_enable_cache', TRUE)) {
+    return $cache->data;
+  }
+
+  // If there are no price data available - skip
+  if (empty($entity->{$field_name}[LANGUAGE_NONE])) {
+    return FALSE;
+  }
+
+  $price_data = array();
+  $time_units = _commerce_lto_get_time_units();
+  arsort($time_units);
+
+  foreach ($entity->{$field_name}[LANGUAGE_NONE] as $delta => $price) {
+    if (!empty($price['data']['date_prices'])) {
+
+      if ($use_period_handling && !empty($price['data']['date_prices']['price_period'])) {
+        // Prepare the data to be used.
+        $period_data = $price['data']['date_prices']['price_period'];
+        $start_date_time = new DateTime($period_data['start'], $from->getTimezone());
+        $end_date_time = new DateTime($period_data['end'], $to->getTimezone());
+        // Since the endate itself is bookable too - increase it.
+        $end_date_time->modify('tomorrow');
+      }
+      elseif ($use_period_handling) {
+        // Price data missing.
+        return FALSE;
+      }
+      else {
+        // Fake price range to be always valid for simple unit calculation
+        $start_date_time = clone $from;
+        $end_date_time = clone $to;
+        // Add some buffer
+        $start_date_time->modify('yesterday');
+        $end_date_time->modify('tomorrow');
+      }
+
+      if (!$use_time_unit_handling) {
+        $now = new DateTime('now', $from->getTimezone());
+        // Check if only the current date has to be used.
+        if ($period_handling_uses_current_date) {
+          if ($start_date_time <= $now && $end_date_time >= $now) {
+            return array(
+              'amount' => $price['amount'],
+              'data' => array(
+                'unit' => $start_date_time->format(DATE_FORMAT_DATETIME) . ' - ' . $end_date_time->format(DATE_FORMAT_DATETIME),
+                'end' => $end_date_time,
+                'start' => $start_date_time,
+                'amount' => $price['amount'],
+              ),
+            );
+          }
+          continue;
+        }
+
+        // If the date range is totaly out of reach - skip
+        if ($end_date_time < $from || $start_date_time > $to) {
+          continue;
+        }
+
+        // Create artificial time units to deal with
+        $price['data']['date_prices']['unit'] = $start_date_time->format(DATE_FORMAT_DATETIME) . ' - ' . $end_date_time->format(DATE_FORMAT_DATETIME) . ' : ' . $price['amount'];
+        $unit_start_time = clone $start_date_time;
+        $unit_end_time = clone $end_date_time;
+
+        // Make sure the coverage calculation results always in 1
+        if ($unit_start_time < $from) {
+          $unit_start_time = clone $from;
+        }
+        if ($unit_end_time > $to) {
+          $unit_end_time = clone $to;
+        }
+
+        // Modify amount to the pro rata value of the duration.
+        $full_duration = $to->format('U') - $from->format('U');
+        $unit_duration = $unit_end_time->format('U') - $unit_start_time->format('U');
+        $price['amount'] = $price['amount'] * ($unit_duration / $full_duration);
+
+        $time_units[$price['data']['date_prices']['unit']] = $unit_duration;
+      }
+
+      // If there's no unit skip.
+      if (empty($price['data']['date_prices']['unit'])) {
+        continue;
+      }
+
+      $price_data[$price['data']['date_prices']['unit']][$start_date_time->format('U')] = array(
+        'unit' => $price['data']['date_prices']['unit'],
+        'end' => $end_date_time,
+        'start' => $start_date_time,
+        'amount' => $price['amount'],
+      );
+
+      // Bring the dates in the right order.
+      ksort($price_data[$price['data']['date_prices']['unit']]);
+    }
+  }
+
+  // Only process if there are actual price units available
+  $usable_time_units = array_intersect_key($time_units, $price_data);
+  if (empty($usable_time_units)) {
+    return FALSE;
+  }
+  arsort($usable_time_units);
+
+  // Do the actuall calculation
+  // @TODO Provide a hook to provide customized callculation callbacks.
+  if (!($price_info = commerce_lto_price_calculation_callback($from, $to, $usable_time_units, $price_data))) {
+    return FALSE;
+  }
+
+  cache_set($cid, $price_info, COMMERCE_LTO_CACHE_BIN, $cache_expiration);
+
+  return $price_info;
+}
+
+/**
+ * "Algorithm" to calculate the price
+ * @param DateTime $from
+ * @param DateTime $to
+ * @param array $time_units
+ *   Time units as prepared by commerce_lto_calculate_price()
+ * @param array $price_data
+ *   Data as prepared by commerce_lto_calculate_price()
+ * @param boolean $pro_rata
+ *
+ * @see commerce_lto_calculate_price()
+ *
+ * @return array|FALSE
+ *   Returns an array with price information or FALSE if the date range is not
+ *   covered by the price defined periods.
+ *   Array consits of array('amount'=>{price}, 'data'=>{metadata})
+ */
+function commerce_lto_price_calculation_callback(DateTime $from, DateTime $to, $time_units,  $price_data, $pro_rata = FALSE) {
+
+  $price_info = array(
+    'amount' => 0,
+    'data' => array(),
+  );
+
+  // Make clones of the dates to work with.
+  $calc_from = clone $from;
+  $calc_to = clone $to;
+
+  // Try to cover date range with the available prices.
+  foreach ($time_units as $unit => $unit_duration) {
+
+    $total_units = _commerce_lto_calculate_date_diff($calc_from, $calc_to, $unit_duration);
+    if (!$pro_rata) {
+      $total_units = floor($total_units);
+    }
+    if ($total_units) {
+      if (!$part_amount = _commerce_lto_calculate_price_fetch_price($unit_duration, $price_data[$unit], $calc_from, $total_units)) {
+        return FALSE;
+      }
+      $price_info['amount'] += $part_amount;
+      $part_info = array(
+        'amount' => $part_amount,
+        $unit => $total_units,
+        'from' => $calc_from->format(DATE_FORMAT_DATETIME),
+      );
+
+      // Move date pointer forward
+      $calc_from->modify('+ ' . ($total_units * $unit_duration) . ' sec');
+
+      $part_info['to'] = $calc_from->format(DATE_FORMAT_DATETIME);
+      $price_info['data'][] = $part_info;
+    }
+    // If date range is covered skipp.
+    if ($calc_from == $calc_to) {
+      break;
+    }
+  }
+
+  // If we still have an open range calculate pro rate.
+  if ($calc_from < $calc_to) {
+    // When calculate pro rata - try to fill with smallest unit.
+    asort($time_units);
+    if (!$pro_rata_price = commerce_lto_price_calculation_callback($calc_from, $to, $time_units, $price_data, TRUE)) {
+      return FALSE;
+    }
+    $price_info['amount'] += $pro_rata_price['amount'];
+    $price_info['data'] = array_merge($price_info['data'], $pro_rata_price['data']);
+  }
+
+  return $price_info;
+}
+
+/**
+ * Builds the prices over multiple price_periods if necessary.
+ * @param integer $unit_duration
+ * @param array $price_data
+ * @param DateTime $from
+ * @param integer $amount
+ */
+function _commerce_lto_calculate_price_fetch_price($unit_duration, array $price_data, DateTime $from, $multiplier) {
+  $price_part = FALSE;
+  $to = clone $from;
+
+  $to->modify('+ ' . ($multiplier * $unit_duration) . ' sec');
+
+  foreach ($price_data as $key => $price_period) {
+    if ($price_period['start'] <= $from) {
+      if ($price_period['end'] >= $to) {
+        return $multiplier * $price_period['amount'];
+      }
+      // Not fully covered - but at least a sub_part - store this for later use.
+      if ($price_period['end'] >= $from) {
+        $covered_multiplier = _commerce_lto_calculate_date_diff($from, $price_period['end'], $unit_duration);
+        $price_part += $covered_multiplier * $price_period['amount'];
+
+        // Fetch left over amount
+        $reduced_price_data = $price_data;
+        unset($reduced_price_data[$key]); // Remove used price_preiod.
+        $sub_part = _commerce_lto_calculate_price_fetch_price(
+          $unit_duration,
+          $reduced_price_data,
+          $price_period['end'],
+          ($multiplier - $covered_multiplier)
+        );
+        if (!$sub_part) {
+          // Leftover amount could not be covered.
+          return FALSE;
+        }
+        return $price_part + $sub_part;
+      }
+    }
+  }
+  return $price_part;
+}
+
+/**
+ * Calculates the amount of units two date differ.
+ * @param DateTime $from
+ * @param DateTime $to
+ * @param integer $unit_duration
+ */
+function _commerce_lto_calculate_date_diff(DateTime $from, DateTime $to, $unit_duration) {
+  return ($to->format('U') - $from->format('U')) / $unit_duration;
+}
+
+/**
+ * Returns the valid date units
+ * @return array
+ */
+function _commerce_lto_get_time_units() {
+  return variable_get('commerce_lto_time_units', array());
+}

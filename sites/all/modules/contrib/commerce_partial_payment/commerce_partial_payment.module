@@ -1,0 +1,344 @@
+<?php
+/**
+ * @file
+ * API functions and hook implementations for the Commerce Partial Payment
+ * module.
+ */
+
+/**
+ * Implements hook_hook_info().
+ */
+function commerce_partial_payment_hook_info() {
+  return array(
+    'commerce_partial_payment_access' => array(
+      'group' => 'commerce',
+    ),
+    'commerce_partial_paryment_received' => array(
+      'group' => 'commerce',
+    ),
+  );
+}
+
+/**
+ * Implements hook_permission().
+ */
+function commerce_partial_payment_permission() {
+  return array(
+    'make partial payments' => array(
+      'title' => t('Make partial payments'),
+      'description' => t('User may make partial payments at checkout rather than paying for their order in full.'),
+    ),
+  );
+}
+
+/**
+ * Implements hook_form_alter().
+ *
+ * Adds a validate callback to the remove button for line items on the user's
+ * cart. We can not use hook_form_FORM_ID_alter() here because the site builder
+ * may override the default cart view.
+ */
+function commerce_partial_payment_form_alter(&$form, &$form_state, $form_id) {
+  // If this is the user's cart then we need to provide a validate callback for
+  // the remove button on line items.
+  if (!empty($form_state['order']) && !empty($form['edit_delete'])) {
+    foreach (element_children($form['edit_delete']) as $key) {
+      if (!empty($form['edit_delete'][$key]['#line_item_id'])) {
+        // Add a validate callback to the button.
+        $form['edit_delete'][$key]['#validate'][] = 'commerce_partial_payment_line_item_remove_validate';
+      }
+    }
+  }
+}
+
+/**
+ * Validate callback for removing a line item from an order.
+ */
+function commerce_partial_payment_line_item_remove_validate($form, &$form_state) {
+  $line_item = entity_metadata_wrapper('commerce_line_item', $form_state['triggering_element']['#line_item_id']);
+
+  // Calculate what the order balance would be after removing the line item.
+  $balance = commerce_payment_order_balance($form_state['order']);
+  $balance_post_remove = $balance['amount'] - $line_item->commerce_total->amount->value();
+
+  // If removing the line item would drop the order's balance below zero then we
+  // should not allow it to be removed.
+  if ($balance_post_remove < 0) {
+    form_set_error(
+    'edit-delete',
+    t(
+    'Removing !line_item from your cart will reduce the balance of the order below the amount that has already been paid.',
+    array('!line_item' => $line_item->line_item_label->value())
+    )
+    );
+  }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ *
+ * Alters whichever commerce checkout page includes the commerece_payment
+ * checkout pane and adds the amount element to the payment details.
+ */
+function commerce_partial_payment_form_commerce_checkout_form_alter(&$form, &$form_state, $form_id) {
+  // If this is not the checkout page that the payment pane is on  or the user
+  // is not allowed to make a partial payment for the order then we have nothing
+  // to do here.
+  $panes = commerce_checkout_panes(array('pane_id' => 'commerce_payment'));
+  $checkout_page = $panes['commerce_payment']['page'];
+  if ($form_id != "commerce_checkout_form_$checkout_page" || !commerce_partial_payment_access($form_state['order'])) {
+    return;
+  }
+
+  // If a values has already been set then use it as the value for the amount.
+  // Otherwise, default it to the balance of the order.
+  $default = NULL;
+  if (isset($form_state['values']['commerce_payment']['payment_details']['amount'])) {
+    $default = $form_state['values']['commerce_payment']['payment_details']['amount'];
+  }
+  else {
+    $balance = commerce_payment_order_balance($form_state['order']);
+    $default = commerce_currency_amount_to_decimal($balance['amount'], $balance['currency_code']);
+  }
+
+  // Add the amount to the payment details form.
+  $form['commerce_payment']['payment_details']['amount'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Amount'),
+    '#size' => 10,
+    '#weight' => -10,
+    '#required' => TRUE,
+    '#default_value' => $default,
+  );
+}
+
+/**
+ * Determines if the current user is allowed to make partial payments for an
+ * order.
+ *
+ * @param stdClass $order
+ *   Commerce order entity that the payment would be applied to.
+ *
+ * @return boolean
+ *   Whether or not the user may make a partial payment for the order.
+ */
+function commerce_partial_payment_access($order) {
+  // Make sure the user has access to make partial payments.
+  if (!user_access('make partial payments')) {
+    return FALSE;
+  }
+
+  // Let other modules determine access. If no implementations return FALSE then
+  // we can allow the user to make partial payments.
+  $results = module_invoke_all('commerce_partial_payment_access', $order);
+  if (in_array(FALSE, $results, TRUE)) {
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Add the partial payment message override to the completion message checkout
+ * pane settings.
+ */
+function commerce_partial_payment_form_commerce_checkout_pane_settings_form_alter(&$form, &$form_state, $form_id) {
+  // Make sure this is the settings form for the checkout completion message
+  // pane.
+  if ($form['checkout_pane']['#value']['pane_id'] != 'checkout_completion_message') {
+    return;
+  }
+
+  // Find our default message and text format values.
+  $data = variable_get('commerce_checkout_partial_payment_message', NULL);
+  if (!is_null($data)) {
+    $message = $data['value'];
+    $text_format = $data['format'];
+  }
+  else {
+    $message = _commerce_partial_payment_message_default();
+    $text_format = (filter_format_load('filtered_html') ? 'filtered_html' : filter_fallback_format());
+  }
+
+  // Add the setting to allow the default message to be overridden.
+  $form['settings']['commerce_checkout_partial_payment_message_override'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Override the default partial payment message. This may interfere with translation on multilingual sites.'),
+    '#default_value' => variable_get('commerce_checkout_partial_payment_message_override', FALSE),
+    '#access' => filter_access(filter_format_load($text_format)),
+  );
+
+  // Add the container for the actual message.
+  $form['settings']['partial_payment_container'] = array(
+    '#type' => 'container',
+    '#access' => filter_access(filter_format_load($text_format)),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="commerce_checkout_partial_payment_message_override"]' => array('checked' => TRUE),
+      ),
+    ),
+    'commerce_checkout_partial_payment_message' => array(
+      '#type' => 'text_format',
+      '#title' => t('Partial payment completion message'),
+      '#description' => t('This message will be displayed instead of the completiion message when a user checks out using a partial payment that is less than the balance of the order.'),
+      '#default_value' => $message,
+      '#format' => $text_format,
+    ),
+    'commerce_checkout_partial_payment_message_help' => $form['settings']['container']['commerce_checkout_completion_message_help'],
+  );
+}
+
+/**
+ * Returns the default checkout partial payment message.
+ */
+function _commerce_partial_payment_message_default() {
+  if (filter_format_load('filtered_html')) {
+    return t('You have made a partial payment to your order number [commerce-order:order-number]. This order will remain in your <a href="/cart">cart</a> until you have completed payment.')
+      . "\n\n" . t('<a href="[site:url]">Return to the front page.</a>');
+  }
+  else {
+    return t('Your order is number [commerce-order:order-number]. This order will remain in your cart until you have completed payment.');
+  }
+}
+
+/**
+ * Form callback function for the checkout_completion_message checkout pane.
+ */
+function commerce_partial_payment_message_form($form, &$form_state, $checkout_pane, $order) {
+  // If the order has been paid in full then we can fall through to the default
+  // callback.
+  $balance = commerce_payment_order_balance($order);
+  if ($balance['amount'] <= 0) {
+    return commerce_checkout_completion_message_pane_checkout_form($form, $form_state, $checkout_pane, $order);
+  }
+
+  // Load the appropriate partial payment message.
+  $data = variable_get('commerce_checkout_partial_payment_message', NULL);
+  if (variable_get('commerce_checkout_partial_payment_message_override', FALSE) && !is_null($data)) {
+    $message = $data['value'];
+    $text_format = $data['format'];
+  }
+  else {
+    $message = _commerce_partial_payment_message_default();
+    $text_format = (filter_format_load('filtered_html') ? 'filtered_html' : filter_fallback_format());
+  }
+
+  // Perform token replacement and apply the text format.
+  $message = token_replace($message, array('commerce-order' => $order), array('clear' => TRUE));
+  $message = check_markup($message, $text_format);
+
+  return array(
+    'message' => array(
+      '#markup' => '<div class="checkout-completion-message">' . $message . '</div>',
+    ),
+  );
+}
+
+/**
+ * Validate callback function for the commerce_payment checkout pane.
+ *
+ * Validates that the user entered a valid amount.
+ *
+ * @see commerce_payment_pane_checkout_form_validate()
+ */
+function commerce_partial_payment_checkout_validate($form, &$form_state, $checkout_pane, $order) {
+  $valid = commerce_payment_pane_checkout_form_validate($form, $form_state, $checkout_pane, $order);
+
+  // If the amount field is not present then we have nothing more to validate.
+  if (!isset($form_state['values']['commerce_payment']['payment_details']['amount'])) {
+    return $valid;
+  }
+
+  // Get the order's balance so that we can compare it to the amount that was
+  // entered.
+  $balance = commerce_payment_order_balance($order);
+
+  // Copy the balance to the amount and update to be the entered amount so the
+  // amount and balance are both formatted properly.
+  $amount = $balance;
+  $amount['amount'] = $form_state['values']['commerce_payment']['payment_details']['amount'];
+  $amount['amount'] = commerce_currency_decimal_to_amount($amount['amount'], $amount['currency_code']);
+
+  // Verify that the user entered a valid amount.
+  if ($amount['amount'] <= 0) {
+    form_set_error('amount', t('You must enter an amount greater than zero.'));
+    $valid = FALSE;
+  }
+  elseif ($amount['amount'] > $balance['amount']) {
+    form_set_error(
+      'amount',
+      t(
+        'The amount you have entered is greater than the order balance of !balance',
+        array('!balance' => commerce_currency_format($balance['amount'], $balance['currency_code']))
+      )
+    );
+    $valid = FALSE;
+  }
+
+  return $valid;
+}
+
+/**
+ * Submit callback function for the commerce_payment checkout pane.
+ *
+ * Calls the appropriate callback function for the selected payment method with
+ * the amount specified by the user.
+ *
+ * @see commerce_payment_pane_checkout_form_submit()
+ *
+ * @todo This function reproduces a lot of code from
+ * commerce_payment_pane_checkout_form_submit(). Patch commerce_payment to add a
+ * hook implementation to accomplish what we need instead.
+ */
+function commerce_partial_payment_checkout_submit($form, &$form_state, $checkout_pane, $order) {
+  // Check to make sure there are no validation issues with other form elements
+  // before executing payment method callbacks.
+  if (form_get_errors()) {
+    drupal_set_message(t('Your payment will not be processed until all errors on the page have been addressed.'), 'warning');
+    return FALSE;
+  }
+
+  // Only submit if we actually had payment methods on the form.
+  $pane_id = $checkout_pane['pane_id'];
+  if (!empty($form[$pane_id]) && !empty($form_state['values'][$pane_id])) {
+    $pane_form = $form[$pane_id];
+    $pane_values = $form_state['values'][$pane_id];
+
+    // Only process if there were payment methods available.
+    if ($pane_values['payment_methods']) {
+      // If an amount was specified then we need to use that rather than the
+      // order balance.
+      $amount = commerce_payment_order_balance($order);
+      if (!empty($form_state['values']['commerce_payment']['payment_details']['amount'])) {
+        $amount['amount'] = $form_state['values']['commerce_payment']['payment_details']['amount'];
+        $amount['amount'] = commerce_currency_decimal_to_amount($amount['amount'], $amount['currency_code']);
+      }
+
+      // If we can calculate a single order total for the order...
+      $order->data['payment_method'] = $pane_values['payment_method'];
+      if ($amount) {
+        // Delegate submit to the payment method callback.
+        $payment_method = commerce_payment_method_instance_load($pane_values['payment_method']);
+        $callback = commerce_payment_method_callback($payment_method, 'submit_form_submit');
+        if ($callback) {
+          // Initialize the payment details array to accommodate payment methods
+          // that don't add any additional details to the checkout pane form.
+          if (empty($pane_values['payment_details'])) {
+            $pane_values['payment_details'] = array();
+          }
+
+          // If payment fails, rebuild the checkout form without progressing.
+          $result = $callback($payment_method, $pane_form['payment_details'], $pane_values['payment_details'], $order, $amount);
+          if ($result === FALSE) {
+            $form_state['rebuild'] = TRUE;
+          }
+          else {
+            rules_invoke_all('commerce_partial_paryment_received', $order, $amount);
+          }
+        }
+      }
+    }
+  }
+}

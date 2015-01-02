@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Nodes Basic Pages feature.
+ */
+
+include_once 'nodes_basic_pages.features.inc';

@@ -1,0 +1,589 @@
+<?php
+/**
+ * @file
+ * Code for the ULearn Course feature.
+ */
+
+include_once 'ulearn_course.features.inc';
+
+/** 
+ * Implements hook_commerce_product_uri().
+ */
+function ulearn_course_commerce_product_uri($product) {
+  if ($product->type == 'course') {
+    $nodes = _commerce_apd_get_nodes_referencing($product->product_id);
+    if (!empty($nodes[0])) {
+      $product_node = node_load($nodes[0]);
+      return entity_uri('node', $product_node);
+    }
+  }
+}
+
+/**
+ * Implements hook_commerce_product_insert().
+ */
+function ulearn_course_commerce_product_insert($product) {
+  global $user;
+  if ($product->type == 'course' && in_array('partner', $user->roles)) {
+    // Partner does not have access to share amount field.
+    // Set configured amount for this field.
+    $courses_config = variable_get('ulearn_courses', array());
+    $ulearn_amount = !empty($courses_config['ulearn_course_amount']) ? $courses_config['ulearn_course_amount'] : 0;
+    $product->field_ulearn_share_amount[LANGUAGE_NONE][0]['value'] = $ulearn_amount;
+    field_attach_update('commerce_product', $product);
+  }
+}
+
+/**
+ * Implements hook_commerce_line_item_presave().
+ */
+function ulearn_course_commerce_line_item_presave($line_item) {
+  $line_item_wrapper = entity_metadata_wrapper('commerce_line_item', $line_item);
+  if (!empty($line_item->commerce_product) && ($line_item_wrapper->commerce_product->type->value() == 'course')) {
+    // Get configured amount percentage.
+    $share_amount_percentage = $line_item_wrapper->commerce_product->field_ulearn_share_amount->value();
+    // Unit amount of line item.
+    $unit_amount =  $line_item_wrapper->commerce_unit_price->amount->value();
+
+    // Calculate share amount.
+    $share_amount = ($share_amount_percentage / 100) * $unit_amount;
+
+    // Save this amount into line item so we can use it.
+    $data = $line_item->data;
+    $data['ulearn_course_share']['amount'] = $share_amount;
+    $data['ulearn_course_share']['currency_code'] = $line_item_wrapper->commerce_unit_price->currency_code->value();
+
+    // Also we will save percentage amount from product.
+    $data['ulearn_course_share']['percentage_amount'] = $share_amount_percentage;
+    $line_item->data = $data;
+  }
+}
+
+/**
+ * Implements hook_entity_view_alter().
+ */
+function ulearn_course_entity_view_alter(&$build, $type) {
+  if ($type == 'registration') {
+    $entity = $build['#entity'];
+    if ($entity->type == 'ulearn_course_registration') {
+      // Remove unecessary fields to be displayed on course registration.
+      $hide_info = array('mail', 'host_entity_link', 'created', 'updated', 'slots', 'author', 'user', 'state', 'commerce_registration_order');
+      foreach ($hide_info as $field) {
+        if (!empty($build[$field])) {
+          $build[$field]['#access'] = FALSE;
+        }
+      }
+
+      $print_format = theme('print_format_link');
+      $printpdf_format = theme('print_pdf_format_link');
+      $print_format['attributes']['target'] = '_blank';
+      $printpdf_format['attributes']['target'] = '_blank';
+      $build['ulearn_course_registration_display_print_links'] = array(
+        '#weight' => 0,
+        '#theme' => 'links',
+        '#links' => array(
+          array(
+            'href' => PRINT_PATH . '/registration/' . $entity->registration_id,
+            'title' => $print_format['text'],
+            'attributes' => $print_format['attributes'],
+            'html' => $print_format['html'],
+          ),
+          array(
+            'href' => PRINTPDF_PATH . '/registration/' . $entity->registration_id,
+            'title' => $printpdf_format['text'],
+            'attributes' => $printpdf_format['attributes'],
+            'html' => $printpdf_format['html'],
+          ),
+        ),
+        '#attributes' => array(
+          'class' => array('ulearn-print-links', 'links'),
+        ),
+      );
+      // Render our view instead.
+      $build['ulearn_course_registration_display'] = array(
+        '#markup' => views_embed_view('registration_display', 'default', $entity->registration_id),
+        '#weight' => 1,
+      );
+    }
+  }
+  if ($type == 'node') {
+    $node = $build['#node'];
+    if ($node->type == 'course_display') {
+      $product_id = $node->field_course_product_reference[LANGUAGE_NONE][0]['product_id'];
+      $product = commerce_product_load($product_id);
+      global $user;
+      // Do not allow course to be added into cart if registration is disabled.
+      if (in_array($product->type, ulearn_commerce_product_types()) && $order = commerce_cart_order_load($user->uid)) {
+        $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+        foreach ($order_wrapper->commerce_line_items as $line_item_wrapper) {
+          if (isset($line_item_wrapper->commerce_product)) {
+            $cart_product_type = $line_item_wrapper->commerce_product->type->value();
+            $cart_product_id = $line_item_wrapper->commerce_product->product_id->value();
+            if ($cart_product_type == $product->type && $cart_product_id == $product->product_id) {
+              drupal_set_message(t('%title is already present in <a href="!cart-url">your cart</a>.', array('%title' => $product->title, '!cart-url' => url('cart'))), 'warning');
+              break;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_registration_access().
+ */
+function ulearn_course_registration_access($op, $registration, $account = NULL) {
+  if ($op == 'view' && $registration->type == 'ulearn_course_registration' && in_array('partner', $account->roles)) {
+    $course = commerce_product_load($registration->entity_id);
+    return $course->uid == $account->uid;
+  }
+}
+
+/**
+ * Implements hook_registration_insert().
+ */
+function ulearn_course_registration_insert($registration) {
+  if ($registration->type == 'ulearn_course_registration' && empty($registration->field_registration_unique_id[LANGUAGE_NONE][0]['value'])) {
+    $registration_id = '';
+
+    $courses_config = variable_get('ulearn_courses', array());
+    $pattern = !empty($courses_config['ulearn_course_registration_pattern']) ? $courses_config['ulearn_course_registration_pattern'] : '[node:field-course-unique-id]-[registration:registration-id]';
+
+    // Get product id.
+    $product_id = $registration->entity_id;
+    foreach (_commerce_apd_get_nodes_referencing($product_id) as $nid) {
+      $course = node_load($nid);
+      // This node is of type course_display.
+      // Replace tokens for course.
+      $registration_id = token_replace($pattern, array('node' => $course, 'registration' => $registration));
+      // Get the school from course.
+      if (!empty($course->field_course_school[LANGUAGE_NONE][0]['nid'])) {
+        $school_id = $course->field_course_school[LANGUAGE_NONE][0]['nid'];
+        $school = node_load($school_id);
+        $registration_id = token_replace($registration_id, array('node' => $school));
+      }
+    }
+    // Save registration id.
+    $registration->field_registration_unique_id[LANGUAGE_NONE][0]['value'] = $registration_id;
+    field_attach_update('registration', $registration);
+  }
+}
+
+/**
+ * Implements hook_field_widget_form_alter().
+ */
+function ulearn_course_field_widget_form_alter(&$element, &$form_state, $context) {
+  if (!empty($element['#field_name']) && $element['#field_name'] == 'field_course_weeks') {
+    // Remove 'select' option.
+    unset($element['set_details']['field_course_week_options']['options']['_none']);
+    // Keep first option as default for new courses.
+    if (!empty($context['form']['#entity']->is_new)) {
+      $element['set_details']['field_course_week_options']['options'][1]['default']['#default_value'] = TRUE;
+    }
+  }
+}
+
+/**
+ * Implements hook_commerce_cart_product_add().
+ */
+function ulearn_course_commerce_cart_product_add($order, $product, $quantity, $line_item) {
+  if ($product->type == 'course' && !empty($_SESSION['ulearn_course_week_options'][$product->product_id])) {
+    // Store session values into line item data.
+    $line_item->data['ulearn_course_week_options'][$product->product_id] = array(
+      'start_date' => $_SESSION['ulearn_course_week_options'][$product->product_id]['start_date'],
+      'end_date' => $_SESSION['ulearn_course_week_options'][$product->product_id]['end_date'],
+    );
+    commerce_line_item_save($line_item);
+    // Unset the session.
+    unset($_SESSION['ulearn_course_week_options'][$product->product_id]);
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function ulearn_course_form_alter(&$form, &$form_state, $form_id) {
+  global $user;
+
+  // Commerce product form.
+  if ($form_id == 'commerce_product_ui_product_form') {
+    $entity = $form['#entity'];
+    // Set default value for new course only and not on update.
+    if (empty($entity->nid) && !empty($form['field_ulearn_share_amount'][LANGUAGE_NONE][0]['value'])) {
+      $courses_config = variable_get('ulearn_courses', array());
+      $ulearn_amount = !empty($courses_config['ulearn_course_amount']) ? $courses_config['ulearn_course_amount'] : 0;
+      $form['field_ulearn_share_amount'][LANGUAGE_NONE][0]['value']['#default_value'] = $ulearn_amount;
+    }
+
+    // Disable amount field currently.
+    foreach ($form['field_course_dates_weeks'][LANGUAGE_NONE] as $k => $elements) {
+      if (!empty($form['field_course_dates_weeks'][LANGUAGE_NONE][$k]['field_course_week_amount'][LANGUAGE_NONE])) {
+        $form['field_course_dates_weeks'][LANGUAGE_NONE][$k]['field_course_week_amount'][LANGUAGE_NONE][0]['#access'] = FALSE;
+      }
+    }
+  }
+
+  //  Course node form.
+  if ($form_id == 'course_display_node_form') {
+    $course_node = $form['#node'];
+
+    // Assign default value for ULearn share amount field.
+    if (empty($course_node->nid) && !empty($form['field_course_product_reference'][LANGUAGE_NONE]['form']['field_ulearn_share_amount'][LANGUAGE_NONE][0]['value'])) {
+      $courses_config = variable_get('ulearn_courses', array());
+      $ulearn_amount = !empty($courses_config['ulearn_course_amount']) ? $courses_config['ulearn_course_amount'] : 0;
+      $form['field_course_product_reference'][LANGUAGE_NONE]['form']['field_ulearn_share_amount'][LANGUAGE_NONE][0]['value']['#default_value'] = $ulearn_amount;
+    }
+
+    // Remove empty option from school selection.
+    unset($form['field_course_school'][LANGUAGE_NONE]['#options']['_none']);
+
+    // Disable amount field currently.
+    foreach ($form['field_course_product_reference'][LANGUAGE_NONE]['form']['field_course_dates_weeks'][LANGUAGE_NONE] as $k => $elements) {
+      if (!empty($form['field_course_product_reference'][LANGUAGE_NONE]['form']['field_course_dates_weeks'][LANGUAGE_NONE][$k]['field_course_week_amount'][LANGUAGE_NONE])) {
+        $form['field_course_product_reference'][LANGUAGE_NONE]['form']['field_course_dates_weeks'][LANGUAGE_NONE][$k]['field_course_week_amount'][LANGUAGE_NONE][0]['#access'] = FALSE;
+      }
+    }
+  }
+
+  // Commerce Add to cart form.
+  if (strpos($form_id, 'commerce_cart_add_to_cart') !== FALSE) {
+    if (!empty($form['capacity'])) {
+      $form['capacity']['#access'] = FALSE;
+    }
+    if (!empty($form['product_id']['#value'])) {
+      $product = commerce_product_load($form['product_id']['#value']);
+      // Do not allow course to be added into cart if registration is disabled.
+      if ($product->type == 'course' && empty($product->field_course_registration[LANGUAGE_NONE][0]['registration_type'])) {
+        $form['#access'] = FALSE;
+      }
+      // Do not allow course to be added into cart if already added.
+      if (in_array($product->type, ulearn_commerce_product_types()) && $order = commerce_cart_order_load($user->uid)) {
+        $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+        foreach ($order_wrapper->commerce_line_items as $line_item_wrapper) {
+          if (isset($line_item_wrapper->commerce_product)) {
+            $cart_product_type = $line_item_wrapper->commerce_product->type->value();
+            $cart_product_id = $line_item_wrapper->commerce_product->product_id->value();
+            if ($cart_product_type == $product->type && $cart_product_id == $product->product_id) {
+              $form['#access'] = FALSE;
+              break;
+            }
+          }
+        }
+      }
+      // Update course week options.
+      if ($product->type == 'course') {
+        _ulearn_course_form_week_options($form, $form_state, $product);
+      }
+    }
+  }
+
+  // Commerce checkout registration form.
+  if ($form_id == 'commerce_checkout_form_registration') {
+    foreach ($form['registration_information'] as $key => &$registration_info) {
+      if (is_array($registration_info)) {
+        foreach ($registration_info as $reg_id => &$element) {
+          if (is_array($element) && !empty($element['register_for']) && in_array('student', $user->roles)) {
+            $element['register_for']['#default_value'] = 'registration_registrant_type_me';
+            $element['register_for']['#access'] = FALSE;
+          }
+          if (!empty($element['#entity']->entity_id)) {
+            $entity = $element['#entity'];
+            $product = commerce_product_load($entity->entity_id);
+            if ($product->type == 'course') {
+              $nodes = _commerce_apd_get_nodes_referencing($product->product_id);
+              if (!empty($nodes[0])) {
+                $product_node = node_load($nodes[0]);
+                if (isset($product_node->field_course_date[LANGUAGE_NONE][0]['value'])) {
+                  $value = $product_node->field_course_date[LANGUAGE_NONE][0]['value'];
+                  $value2 = $product_node->field_course_date[LANGUAGE_NONE][0]['value2'];
+                  // Set default values and freeze the date fields.
+                  $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#default_value']['value'] = $value;
+                  $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#default_value']['value2'] = $value2;
+                  $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#date_items']['value'] = $value;
+                  $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#date_items']['value2'] = $value2;
+                  $element['field_registrant_enrollment_date']['#access'] = FALSE;
+                  // Show markup for enrollment date.
+                  $start_enrollment_date = strtotime($value);
+                  $end_enrollment_date = strtotime($value2);
+                  $element['ulearn_course_enrollment_markup'] = array(
+                    '#markup' => '<div class="ulearn-course-enrollment-markup field-label-inline"><label class="field-label">' . $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#title'] . ':</label>&nbsp' . ulearn_settings_date_diff($start_enrollment_date, $end_enrollment_date, TRUE),
+                    '#weight' => $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#weight'],
+                  );
+                }
+              }
+              // Check for week options.
+              $order = $form_state['order'];
+              $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+              foreach ($order_wrapper->commerce_line_items as $i => $line_item_wrapper) {
+                if (isset($line_item_wrapper->commerce_product)) {
+                  $product_id = $line_item_wrapper->commerce_product->product_id->value();
+                  if ($product_id == $product->product_id) {
+                    $line_item_id = $line_item_wrapper->line_item_id->value();
+                    $line_item = commerce_line_item_load($line_item_id);
+                    $data = $line_item->data;
+                    // Get the timestamps from session.
+                    if (!empty($data['ulearn_course_week_options'][$product_id])) {
+                      $start_timestamp = $data['ulearn_course_week_options'][$product_id]['start_date'];
+                      $end_timestamp = $data['ulearn_course_week_options'][$product_id]['end_date'];
+                      $courses_config = variable_get('ulearn_courses', array());
+                      $friday = $courses_config['ulearn_course_week_end_friday'];
+                      if ($friday) {
+                        $end_timestamp = strtotime('-3 days', $end_timestamp);
+                      }
+                      $value = format_date($start_timestamp, 'custom', 'Y-m-d 00:00:00');
+                      $value2 = format_date($end_timestamp, 'custom', 'Y-m-d 00:00:00');
+                      $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#default_value']['value'] = $value;
+                      $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#default_value']['value2'] = $value2;
+                      $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#date_items']['value'] = $value;
+                      $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#date_items']['value2'] = $value2;
+                      $element['field_registrant_enrollment_date']['#access'] = FALSE;
+                      // Show markup for enrollment date.
+                      $element['ulearn_course_enrollment_markup'] = array(
+                        '#markup' => '<div class="ulearn-course-enrollment-markup field-label-inline"><label class="field-label">' . $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#title'] . ':</label>&nbsp' . ulearn_settings_date_diff($start_timestamp, $end_timestamp),
+                        '#weight' => $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#weight'],
+                      );
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_print_pdf_filename_alter().
+ */
+function ulearn_course_print_pdf_filename_alter(&$pdf_filename, &$path) {
+  if (strpos($pdf_filename, 'registration') !== FALSE) {
+    $time = time();
+    $format_date = format_date($time, 'custom', 'Y-m-d');
+    $pdf_filename .= '-' . $format_date;
+    $pdf_filename = str_replace(array(' ', '_'), '-', $pdf_filename);
+  }
+}
+
+/**
+ * Implements hook_views_access_callbacks().
+ */
+function ulearn_course_views_access_callbacks() {
+  return array(
+    'ulearn_course_registration_view_access' => t('Access to course registration view.'),
+  );
+}
+
+/**
+ * Access callback for course registration view.
+ */
+function ulearn_course_registration_view_access($args) {
+  global $user;
+  if (user_access('access all views') || in_array('ulearn admin', $user->roles)) {
+    return TRUE;
+  }
+
+  $course = node_load($args);
+  if ($course && in_array('partner', $user->roles) && ($course->uid == $user->uid)) {
+    return TRUE;
+  }
+  return FALSE;
+}
+
+
+/**
+ * Implements hook_menu().
+ */
+function ulearn_course_menu() {
+
+  $items['admin/config/ulearn/variables/ulearn_course'] = array(
+    'title' => 'Ulearn Course variables',
+    'description' => 'Ulearn Course variable.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('variable_group_form', 'ulearn_course'),
+    'access arguments' => array('administer ulearn'),
+  );
+  return $items;
+}
+
+/**
+ * Update add to cart form for week options.
+ */
+function _ulearn_course_form_week_options(&$form, &$form_state, $product) {
+  $product_wrapper = entity_metadata_wrapper('commerce_product', $product);
+  $time = format_date(time(), 'custom', 'Y-m-d 00:00:00');
+  $timestamp = strtotime($time);
+  $start_date_options = array();
+  foreach ($product_wrapper->field_course_dates_weeks as $field_collection_wrapper) {
+    $item_id = $field_collection_wrapper->item_id->value();
+    $start_date = $field_collection_wrapper->field_course_batch_start_date->value();
+    // Skip past dates.
+    if ($start_date >= $timestamp) {
+      // Use ULearn global date format.
+      $start_date_options[$item_id] = format_date($start_date, 'ulearn_date_format');
+    }
+  }
+  if (!empty($start_date_options)) {
+    $field_course_weeks = $form['field_course_weeks'];
+    unset($form['field_course_weeks']);
+    $option_keys = array_keys($start_date_options);
+    $default_start_date = !empty($form_state['input']['ulearn_course_date_options']) ? $form_state['input']['ulearn_course_date_options'] : reset($option_keys);
+    // Create form element to select start date for course.
+    $form['ulearn_course_date_options'] = array(
+      '#type' => 'select',
+      '#title' => t('Start date'),
+      '#options' => $start_date_options,
+      '#default_value' => $default_start_date,
+      '#ajax' => array(
+        'callback' => 'ulearn_course_add_to_cart_form_refresh',
+        'progress' => array(
+          'type' => 'throbber',
+          'message' => '',
+        ),
+      ),
+    );
+
+    // Store this field collection id in session so we
+    // can use to calculate seasonal amount in rules action.
+    $product = $form_state['default_product'];
+    $_SESSION['ulearn_course_selected_week'][$product->product_id] = $default_start_date;
+
+    // Get weeks specified for this date.
+    $weeks = ulearn_course_field_collection_item_weeks($default_start_date);
+    // Only use weeks which are available in week options.
+    $existing_options = array_keys($field_course_weeks[0]['field_course_week_options'][LANGUAGE_NONE]['#options']);
+    $week_options = array();
+    foreach ($weeks as $key) {
+      if (in_array($key, $existing_options)) {
+        $week_options[] = $key;
+      }
+    }
+    if (!empty($week_options)) {
+      $field_course_weeks[0]['field_course_week_options'][LANGUAGE_NONE]['#options'] = drupal_map_assoc($week_options);
+      $default = reset($week_options);
+      $field_course_weeks[0]['field_course_week_options'][LANGUAGE_NONE]['#default_value'] = $default;
+
+      if (empty($_SESSION['ulearn_course_selected_week_option'][$product->product_id])) {
+        $_SESSION['ulearn_course_selected_week_option'][$product->product_id] = $default;
+      }
+    }
+    // Do not display weeks if there are no week options.
+    $access = !empty($week_options);
+    $field_course_weeks[0]['field_course_week_options'][LANGUAGE_NONE]['#access'] = $access;
+    $form['ulearn_course_date_options']['#access'] = $access;
+    $field_course_weeks[0]['field_course_week_options'][LANGUAGE_NONE]['#required'] = $access;
+    // Add wrapper around element.
+    $field_course_weeks['#prefix'] = '<div class="ulearn-course-field-course-week-wrapper">';
+    $field_course_weeks['#suffix'] = '</div>';
+
+    // Add AJAX callback to add select data in session so we can use that
+    // in product pricing rule.
+    $field_course_weeks[0]['field_course_week_options'][LANGUAGE_NONE]['#ajax'] = array('callback' => 'ulearn_course_weeks_callback', 'progress' => array('type' => 'throbber', 'message' => ''));
+
+    $form['field_course_weeks'] = $field_course_weeks;
+    // Execute our submit before others.
+    array_unshift($form['#submit'], 'ulearn_course_week_options_submit');
+
+    // We need to add context on views listing page.
+    if (empty($form_state['context']) && !empty($form_state['default_product']->product_id)) {
+      $product_id = $form_state['default_product']->product_id;
+      $nodes = _commerce_apd_get_nodes_referencing($product_id);
+      if (!empty($nodes[0])) {
+        $product_node = node_load($nodes[0]);
+        $form_state['context'] = array(
+          'entity_type' => 'node',
+          'view_mode' => 'node_full',
+          'display' => 'full',
+          'language' => $product_node->language,
+          'entity_id' => $product_node->nid,
+          'class_prefix' => 'node-' . $product_node->nid,
+        );
+        // Also hide titles on view listing.
+        $form['ulearn_course_date_options']['#title_display'] = 'invisible';
+        $form['field_course_weeks'][0]['field_course_week_options'][LANGUAGE_NONE]['#title_display'] = 'invisible';
+      }
+    }
+  }
+}
+
+/**
+ * Ajax callback: Set selected data value in session to use it in rule later.
+ */
+function ulearn_course_weeks_callback($form, $form_state) {
+  $selected_week = $form_state['values']['field_course_weeks'][0]['field_course_week_options'][LANGUAGE_NONE][0]['value'];
+  $product_id = $form_state['values']['product_id'];
+  $_SESSION['ulearn_course_selected_week_option'][$product_id] = $selected_week;
+  return commerce_pricing_attributes_add_to_cart_form_attributes_refresh($form, $form_state);
+}
+
+/**
+ * Ajax callback: returns ajax commands when start date is changed.
+ */
+function ulearn_course_add_to_cart_form_refresh($form, &$form_state) {
+  $commands = array();
+  $form_id = strtr(drupal_strtolower($form['#form_id']), array(' ' => '-', '_' => '-', '[' => '-', ']' => ''));
+  $replacement_class = '#' . $form_id . ' .ulearn-course-field-course-week-wrapper';
+  
+  // Update form element so price will also update for default value.
+  $item_id = $form_state['values']['ulearn_course_date_options'];
+
+  // Get weeks specified for this date.
+  $weeks = ulearn_course_field_collection_item_weeks($item_id);
+  $keys = array_values($weeks);
+  $default = reset($keys);
+  $form['field_course_weeks'][0]['field_course_week_options'][LANGUAGE_NONE]['#options'] = drupal_map_assoc($weeks);
+  $form['field_course_weeks'][0]['field_course_week_options'][LANGUAGE_NONE]['#default_value'] = $default;
+  $form['field_course_weeks'][0]['field_course_week_options'][LANGUAGE_NONE]['#value'] = $default;
+  $form_state['values']['field_course_weeks'][0]['field_course_week_options'][LANGUAGE_NONE][0]['value'] = $default;
+  $form_state['input']['field_course_weeks'][0]['field_course_week_options'][LANGUAGE_NONE] = $default;
+  // Get the commands for other attributes.
+  $attribute_ajax = commerce_pricing_attributes_add_to_cart_form_attributes_refresh($form, $form_state);
+  $commands = $attribute_ajax['#commands'];
+  $element = $form['field_course_weeks'];
+  $element += array(
+    '#prefix' => '<div class="ulearn-course-field-course-week-wrapper">',
+    '#suffix' => '</div>',
+  );
+  $commands[] = ajax_command_replace($replacement_class, drupal_render($element));
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+/**
+ * Submit callback for week options.
+ */
+function ulearn_course_week_options_submit($form, &$form_state) {
+  $values = $form_state['values'];
+  if (!empty($values['ulearn_course_date_options'])) {
+    $item_id = $values['ulearn_course_date_options'];
+    $field_collection_item = field_collection_item_load($item_id);
+    // Calculate batch start and end date, so we can use it for registration info.
+    // Wrap the field collection with entity metadata.
+    $field_collection_wrapper = entity_metadata_wrapper('field_collection_item', $field_collection_item);
+    $start_timestamp = $field_collection_wrapper->field_course_batch_start_date->value();
+    // No of weeks selected.
+    $weeks = $values['field_course_weeks'][0]['field_course_week_options'][LANGUAGE_NONE][0]['value'];
+    // Calculate timestamp for end date.
+    $end_timestamp = strtotime('+' . $weeks . ' weeks', $start_timestamp);
+
+    // Store this into session as of now.
+    $_SESSION['ulearn_course_week_options'][$values['product_id']] = array(
+      'start_date' => $start_timestamp,
+      'end_date' => $end_timestamp,
+    );
+  }
+}
+
+/**
+ * Get weeks from field collection item.
+ */
+function ulearn_course_field_collection_item_weeks($item_id) {
+  $item = field_collection_item_load($item_id);
+  $weeks = array();
+  if (!empty($item->field_course_batch_weeks[LANGUAGE_NONE][0]['value'])) {
+    $week_string = $item->field_course_batch_weeks[LANGUAGE_NONE][0]['value'];
+    $weeks = drupal_explode_tags($week_string);
+  }
+  return $weeks;
+}

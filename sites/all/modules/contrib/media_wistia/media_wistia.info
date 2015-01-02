@@ -1,0 +1,9 @@
+name = Media: Wistia
+description = Provides Wistia support for File Entity and the Media module.
+package = "Media"
+core = 7.x
+files[] = includes/MediaInternetWistiaHandler.inc
+files[] = includes/MediaWistiaStreamWrapper.inc
+dependencies[] = media
+dependencies[] = media_internet
+configure = admin/config/services/wistia

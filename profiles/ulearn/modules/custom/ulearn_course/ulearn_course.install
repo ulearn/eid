@@ -1,0 +1,50 @@
+<?php
+
+/**
+ * @file
+ * Install / uninstall functions for ULearn Course module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function ulearn_course_install() {
+  db_update('system')
+    ->fields(array('weight' => 100))
+    ->condition('name', 'ulearn_course', '=')
+    ->execute();
+}
+
+/**
+ * Increase weight of module.
+ */
+function ulearn_course_update_7000(&$sandbox) {
+  db_update('system')
+    ->fields(array('weight' => 100))
+    ->condition('name', 'ulearn_course', '=')
+    ->execute();
+}
+
+/**
+ * Remove Room type field.
+ */
+function ulearn_course_update_7001(&$sandbox) {
+  // Lets mark the field, its instances and its data for deletion.
+  field_delete_field('field_course_room_type');
+  // Refresh the 'active' status of fields.
+  field_sync_field_status();
+  // Do a pass of purging on deleted Field API data, if any exists.
+  $limit = variable_get('field_purge_batch_size', 10);
+  // Purge a batch of deleted Field API data, instances, or fields.
+  field_purge_batch($limit);
+  // Revert feature to generate the field again.
+  features_revert(array('ulearn_course' => array('field_base', 'field_instance')));
+}
+
+/**
+ * Enable Variable Views module.
+ */
+function ulearn_course_update_7002(&$sandbox) {
+  module_enable('variable_views');
+  drupal_flush_all_caches();
+}

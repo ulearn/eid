@@ -1,0 +1,13 @@
+@CHARSET "UTF-8";
+
+.field-type-commerce-price .time-limited-offers .container-inline-date,
+.field-type-commerce-price .time-limited-offers .form-type-select {
+  float: left;
+  margin-right: 1em;
+  clear: none;
+}
+
+.field-type-commerce-price .time-limited-offers,
+.field-type-commerce-price .time-limited-offers .clear {
+ clear: both;
+}

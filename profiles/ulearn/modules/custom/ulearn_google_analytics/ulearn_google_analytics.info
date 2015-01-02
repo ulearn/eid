@@ -1,0 +1,12 @@
+name = ULearn Google Analytics
+description = Google Analytics  management and configurations for ULearn site.
+core = 7.x
+package = Ulearn
+version = 7.x-1.0
+project = ulearn_google_analytics
+dependencies[] = features
+dependencies[] = googleanalytics
+features[features_api][] = api:2
+features[user_permission][] = administer google analytics
+features[user_permission][] = opt-in or out of tracking
+features[user_permission][] = use PHP for tracking visibility

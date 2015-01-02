@@ -1,0 +1,32 @@
+<?php
+
+/**
+ * @file
+ * Install / uninstall functions for ULearn profile module.
+ */
+
+/**
+ * Remove user profile fields to use CiviCRM profile.
+ */
+function ulearn_profile_update_7101(&$sandbox) {
+  // Names of fields that needs to be deleted.
+  $fields = array('field_user_address', 'field_user_first_name', 'field_user_last_name');
+  // Lets mark the field, its instances and its data for deletion.
+  foreach ($fields as $field_name) {
+    field_delete_field($field_name);
+  }
+  // Refresh the 'active' status of fields.
+  field_sync_field_status();
+  // Do a pass of purging on deleted Field API data, if any exists.
+  $limit = variable_get('field_purge_batch_size', 10);
+  // Purge a batch of deleted Field API data, instances, or fields.
+  field_purge_batch($limit);
+  // Delete field group.
+  $group = field_group_load_field_group('group_personal_details', 'user', 'user', 'form');
+  field_group_group_export_delete($group, FALSE);
+  // Revert features.
+  features_revert(array(
+    'ulearn_profile' => array('field_base', 'field_instance', 'field_group'),
+    'ulearn_commerce' => array('field_instance'),
+  ));
+}

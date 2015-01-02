@@ -1,0 +1,10 @@
+name = Asynchronous JavaScript
+description = Asynchronously load JavaScript after window load event.
+core = 7.x
+
+; Information added by Drupal.org packaging script on 2013-12-11
+version = "7.x-1.0-alpha0+1-dev"
+core = "7.x"
+project = "async_js"
+datestamp = "1386781713"
+

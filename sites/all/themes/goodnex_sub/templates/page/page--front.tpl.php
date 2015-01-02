@@ -1,0 +1,169 @@
+<?php
+
+?>
+<head>
+<!-- Put Scripts Here -->
+</head>
+<div id="wrapper">
+<div class="headerfront">
+<header id="header">
+<div class="container">
+<div id="top-bar">
+<div class="lang-top">
+<?php if (isset($page['header_top_left'])) : ?>
+<?php print render($page['header_top_left']); ?>
+<?php endif; ?>
+</div>
+<div class="social-top">
+<?php print render($page['header_top_right']); ?>
+</div>
+</div>
+<div class="sixteen columns">
+<?php if (isset($page['header_left'])) : ?>
+<?php print render($page['header_left']); ?>
+<?php endif; ?>
+<?php if ($logo): ?>
+<h1 class="logo">
+<a href="<?php print $front_page; ?>" title="<?php print t('Home'); ?>" rel="home" id="logo">
+<img src="<?php print $logo; ?>" alt="<?php print t('Home'); ?>" />
+</a>
+</h1>
+<?php endif; ?> 
+<?php if ($site_name || $site_slogan): ?>
+<div id="name-and-slogan"<?php if ($disable_site_name && $disable_site_slogan) { print ' class="hidden"'; } ?>>
+<?php if ($site_name): ?>
+<h1 id="site-name"<?php if ($disable_site_name) { print ' class="hidden"'; } ?>
+<a href="<?php print $front_page; ?>" title="<?php print t('Home'); ?>" rel="home"><span><?php print $site_name; ?></span></a>
+</h1>
+<?php endif; ?>
+<?php if ($site_slogan): ?>
+<div id="site-slogan"<?php if ($disable_site_slogan) { print ' class="hidden"'; } ?>>
+<?php print $site_slogan; ?>
+</div>
+<?php endif; ?>
+</div> <!-- /#name-and-slogan -->
+<?php endif; ?> 
+<?php print render($page['header_right']); ?>
+</div>
+<div class="sixteen columns">
+<div class="menu-container clearfix">
+<nav id="navigation" class="navigation">
+<div class="menu">
+<?php print render($page['header_menu']); ?>
+</div>  
+</nav>
+<?php if ( ($page['header_search']) ): ?>
+<div class="search-wrapper">
+<?php print render($page['header_search']); ?>
+</div><!--/ .search-wrapper--> 
+<?php endif; ?>
+</div>
+</div>
+<div class="clear"></div>
+</div>  				
+</header>
+</div> 
+<!-- Slider -->
+<section id="slider-home">
+<div class="fullwidthbanner-container">
+<?php print render($page['slider-home']); ?>
+</div>
+</section>
+<!-- End Slider -->
+<?php print render($page['before_content_no_wrap']); ?>
+<section id="content">
+<div class="container">
+<?php if ($title) : ?>
+<div class="page-header clearfix">
+<?php if ( ($breadcrumb) AND (theme_get_setting('breadcrumbs') == '1') ): ?>
+<div id="breadcrumbs"><?php print $breadcrumb; ?> </div>	
+<?php endif; ?>
+<h1 class="alignleft"><?php print $title; ?></h1>
+</div><!--/ .page-header-->
+<?php endif; ?>
+<?php print render($page['before_content']); ?>
+<?php if ( ($page['sidebar_left']) ) : ?>
+<aside id="sidebar" class="four columns">
+<?php print render($page['sidebar_left']); ?>
+</aside>
+<?php endif; ?>
+<?php if ( ($page['sidebar_right']) AND ($page['sidebar_left']) ): ?>
+<section id="main" class="eight columns">
+<?php endif; ?>
+<?php if ( (($page['sidebar_right']) AND (!$page['sidebar_left'])) OR ($page['sidebar_left']) AND (!$page['sidebar_right']) ): ?>
+<section id="main" class="eleven columns">
+<?php endif; ?>
+<?php print $messages; ?>
+<?php if ($tabs = render($tabs)): ?>
+<div id="drupal_tabs" class="tabs">
+<?php print render($tabs); ?>
+</div>
+<?php endif; ?>
+<?php print render($page['help']); ?>
+<?php if ($action_links): ?>
+<ul class="action-links">
+<?php print render($action_links); ?>
+</ul>
+<?php endif; ?>
+<?php if (isset($page['content'])) { print render($page['content']); } ?>
+<?php print render($page['after_content']); ?>
+<?php if ( ($page['sidebar_right']) OR ($page['sidebar_left']) ): ?>
+</section>
+<?php endif; ?>
+<?php if ( ($page['sidebar_right']) ) : ?>
+<aside id="sidebar" class="five columns">
+<?php print render($page['sidebar_right']); ?>
+</aside>
+<?php endif; ?>
+</div>
+</section> 
+<?php print render($page['after_content_no_wrap']); ?>
+<!-- Combined Footer -->
+<footer id="footer">
+<div class="container">
+<div class="container clearfix">
+<div class="four columns">
+<ul class="no-bullet clearfix p0 row">
+<li class="widget subscribe three column">
+<?php if (isset($page['footer_1'])) : ?>
+<?php print render($page['footer_1']); ?>
+<?php endif; ?>
+</li>
+</div>  
+<div class="four columns">		
+<li class="widget flickr three column">		
+<?php if (isset($page['footer_2'])) : ?>
+<?php print render($page['footer_2']); ?>
+<?php endif; ?>
+</li>
+</div>  
+<div class="four columns">
+<li class="widget about-us three column">
+<?php if (isset($page['footer_3'])) : ?>
+<?php print render($page['footer_3']); ?>
+<?php endif; ?>
+</li>
+</div>  
+<div class="four columns">
+<li class="widget contact-us three column">
+<?php if (isset($page['footer_4'])) : ?>
+<?php print render($page['footer_4']); ?>
+<?php endif; ?>
+</li>
+</div>  
+</ul>	
+<div class="sixteen columns">
+<div id="back-to-top">
+<a href="#top">Top</a>
+</div>
+<div class="copyright">
+<?php print render($page['footer_bottom']); ?>
+</div>
+<div class="social-icons clearfix">
+<?php print render($page['footer_social']); ?>
+</div>  
+</div>  
+</div>  
+</div>  
+</footer>
+</div>

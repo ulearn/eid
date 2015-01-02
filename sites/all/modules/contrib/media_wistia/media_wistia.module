@@ -1,0 +1,232 @@
+<?php
+
+/**
+ * @file media_wistia/media_wistia.module
+ *
+ * Media: Wistia provides a stream wrapper and formatters for videos provided
+ * by Wistia.
+ */
+
+define('MEDIA_WISTIA_DEFAULT_API_URL', 'https://api.wistia.com/v1/');
+define('MEDIA_WISTIA_DEFAULT_OEMBED_URL', 'http://fast.wistia.com/oembed');
+define('MEDIA_WISTIA_DEFAULT_GETEMBED_URL', 'http://get-embed.wistia.com/oembed.json');
+
+// A registry of variable_get defaults.
+include_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'media_wistia') . '/includes/media_wistia.variables.inc';
+
+// Hooks and callbacks for integrating with File Entity module for display.
+include_once DRUPAL_ROOT . '/' . drupal_get_path('module', 'media_wistia') . '/includes/media_wistia.formatters.inc';
+
+/**
+ * Implements hook_media_internet_providers().
+ *
+ * Provides the wistia provider handler for handling the wistia urls and getting the wistia file objects
+ */
+function media_wistia_media_internet_providers() {
+  $info = array();
+
+  $info['MediaInternetWistiaHandler'] = array(
+    'title' => t('Wistia'),
+  );
+
+  return $info;
+}
+
+/**
+ * Implements hook_stream_wrappers().
+ * Provides the wistia
+ */
+function media_wistia_stream_wrappers() {
+  $info['wistia'] = array(
+    'name' => t('Wistia videos'),
+    'class' => 'MediaWistiaStreamWrapper',
+    'description' => t('Videos provided by Wistia.'),
+    'type' => STREAM_WRAPPERS_READ_VISIBLE,
+  );
+
+  return $info;
+}
+
+/**
+ * Implements hook_media_browser_plugin_info().
+ */
+function media_wistia_media_browser_plugin_info() {
+  $plugins = array();
+  $api_key = variable_get('media_wistia_api_key', '');
+
+  if (!empty($api_key)) {
+    $plugins['wistia'] = array(
+      '#weight' => 20,
+    );
+  }
+
+  return $plugins;
+}
+
+function media_wistia_media_browser_plugin_view($plugin_name, $params) {
+  $path = drupal_get_path('module', 'media_wistia');
+
+  $params += array(
+    'types' => array(),
+    'multiselect' => FALSE,
+  );
+
+  switch ($plugin_name) {
+    case 'wistia':
+      return array(
+        '#title' => t('Wistia'),
+        '#attached' => array(
+          'js' => array(
+            $path . '/js/plugins/media_wistia.library.js',
+          ),
+          'css' => array(
+            $path . '/js/plugins/media_wistia.library.css',
+          ),
+        ),
+        '#settings' => array(
+          'viewMode' => 'thumbnails',
+          'getProjectList' => url('wistia/browser/projectList'),
+          'getProject' => url('wistia/browser/project'),
+        ) + $params,
+        '#markup' => '<div id="container"><div id="scrollbox"><div id="media-browser-wistia-list" class="media-list-thumbnails"></div><div id="wistia-status"></div></div></div>'
+      );
+  }
+
+  return array();
+}
+
+/**
+ * Implements hook_permission().
+ */
+function media_wistia_permission() {
+  return array(
+    'administer wistia' => array(
+      'title' => t('Administer Media: Wistia'),
+    ),
+  );
+}
+
+function media_wistia_menu() {
+
+  $items['admin/config/services/wistia'] = array(
+    'title' => 'Wistia Settings',
+    'description' => 'Global settings for the wistia plugin',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('media_wistia_global_settings'),
+    'access arguments' => array('administer wistia'),
+    'file' => 'media_wistia.admin.inc',
+  );
+
+  // ajax calls for the browser
+  $items['wistia/browser/projectList'] = array(
+    'title' => 'Wistia browser list',
+    'description' => 'Ajax Callback for getting wistia project list',
+    'page callback' => 'media_wistia_browser_project_list',
+    'access callback' => 'media_access',
+    'access arguments' => array('view'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/media_wistia.browser.inc',
+  );
+
+  $items['wistia/browser/project'] = array(
+    'title' => 'Wistia project list',
+    'description' => 'Ajax Callback for getting wistia project',
+    'page callback' => 'media_wistia_browser_project',
+    'access callback' => 'media_access',
+    'access arguments' => array('view'),
+    'type' => MENU_CALLBACK,
+    'file' => 'includes/media_wistia.browser.inc',
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function media_wistia_theme($existing, $type, $theme, $path) {
+  return array(
+    'media_wistia_video' => array(
+      'variables' => array('uri' => NULL, 'options' => array()),
+      'file' => 'media_wistia.theme.inc',
+      'path' => $path . '/includes/themes',
+      'template' => 'media-wistia-video',
+    ),
+    'media_wistia_video_list_item' => array(
+      'variables' => array('project' => NULL, 'videos' => array()),
+      'file' => 'media_wistia.theme.inc',
+      'path' => $path . '/includes/themes',
+      'template' => 'media-wistia-video-list-item',
+    )
+  );
+}
+
+/**
+ * Implements hook_media_parse().
+ */
+function media_wistia_media_parse($embed_code) {
+  $handler = new MediaInternetWistiaHandler($embed_code);
+  return $handler->parse($embed_code);
+}
+
+/**
+ * Implements hook_file_mimetype_mapping_alter().
+ *
+ * Regster the video/wistia mimetype.
+ */
+function media_wistia_file_mimetype_mapping_alter(&$mapping) {
+  $mapping['mimetypes'][] = 'video/wistia';
+}
+
+/*
+ * Implements hook_file_default_types_alter().
+ *
+ * Adds the video/wistia fake mimetype to video files.
+ */
+function media_wistia_file_default_types_alter(&$types) {
+  $types['video']->mimetypes[] = 'video/wistia';
+}
+
+/**
+ * Implements hook_ctools_plugin_api().
+ */
+function media_wistia_ctools_plugin_api($owner, $api) {
+  static $api_versions = array(
+    'file_entity' => array(
+      'file_default_displays' => 1,
+    ),
+  );
+  if (isset($api_versions[$owner][$api])) {
+    return array('version' => $api_versions[$owner][$api]);
+  }
+}
+
+
+/**
+ * Requests video or playlist data from Wistia via oEmbed.
+ *
+ * @param string $url
+ *   The video or playlist URL.
+ *
+ * @return array|FALSE
+ *   An array of data about the video or playlist if the request is successful,
+ *   otherwise FALSE.
+ */
+function _media_wistia_request_data($url) {
+  // Make HTTP request.
+  $endpoint = variable_get('media_wistia_oembed_url', MEDIA_WISTIA_DEFAULT_OEMBED_URL);
+  $url_options['query'] = array(
+    'url' => $url
+  );
+  $result = drupal_http_request(url($endpoint, $url_options));
+
+  if ($data = json_decode($result->data)) {
+    // Success.
+    return (array)$data;
+  }
+  else {
+    // Failure. Either the video or playlist doesn't exist on Wistia or there
+    // was an error with the request.
+    return FALSE;
+  }
+}

@@ -1,0 +1,294 @@
+/* ------------------------------------------------------
+  Widgets
+------------------------------------------------------ */
+/* Categories Widget */
+.widget.categories > ul {
+  margin-bottom: -11px !important;
+}
+
+.widget.categories li {
+  display: block;
+  padding-left: 17px;
+  margin-bottom: 11px;
+  color: #9d9d9d;
+  background: url(../images/list-arrow.png) no-repeat left center;
+}
+
+.widget.categories li a {
+  color: #000;
+  margin-right: 6px;
+  text-transform: capitalize;
+}
+
+.widget.categories li a:hover {
+  text-decoration: underline;
+}
+
+/* Tags Widget */
+.widget .tagcloud {
+  margin-bottom: -7px;
+}
+
+.widget .tagcloud a {
+  display: inline-block;
+  margin: 0 7px 7px 0;
+  padding: 5px 10px;
+  color: #fff;
+  font-size: 0.769em !important;
+  -webkit-border-radius: 5px;
+  -moz-border-radius: 5px;
+  border-radius: 5px;
+}
+
+.tagcloud a:hover {
+  background: #74777b!important;
+}
+
+/* Video Widget */
+.widget.video .flex-video {
+  margin-bottom: 0;
+}
+
+/* Twitter Widget */
+.widget.twitter ul {
+  margin-bottom: -15px;
+}
+
+.widget.twitter li {
+  display: block;
+}
+
+.widget.twitter a,
+.widget.twitter a * {
+  color: #b6d82f;
+}
+
+.widget.twitter a.url {
+  color: #61c2ef;
+  font-style: italic;
+}
+
+.widget.twitter a:hover {
+  text-decoration: underline;
+}
+
+/* MailChimp Widget - Formerly "Subscribe Widget" */
+#block-webform-client-block-2474.edit-submitted-signup-mailchimp-email-address{
+width: 30px;
+}
+.mailchimp{
+color: #fff;
+color: white;
+}
+#webform-component-signup--mailchimp-email-address{
+width: 35px;
+}
+.webform-component-signup--mailchimp-email-address{
+width: 35px;
+}
+.webform-component-signup--mailchimp-email-address{
+width: 35px;
+}
+.mailchimp.form-item.webform-component.webform-component-textfield{
+color:#fff;
+}
+.edit-submitted-signup-mailchimp-email-address{
+width: 35px;
+}
+#.mailchimp{
+width: 35px;
+}
+.edit-submitted-signup-mailchimp-email-address{
+width: 35px;
+}
+
+.widget.webform-component-textfield{
+color: #fff;
+}
+
+/* MAILCHIMP WIDGET (Formerly Subscribe Widget) */
+.widget.subscribe.input[type="text"] {
+  font-size: 0.846em;
+  padding: 10px;
+  background: #888;
+  background: rgba(0,0,0,0.5);
+  color: #ffff;
+  margin: 0;
+  border: none;
+  width: 35px;
+}
+
+#edit-submitted-signup-mailchimp-email-address{
+width: 175px;
+}
+.widget.subscribe input[type="text"] {
+  color: #fff;
+}
+
+.widget.subscribe input[type="text"] {
+  color: #fff;
+}
+
+.widget.subscribe input[type="text"] {
+  color: #fff;
+}
+
+
+/*
+.widget.subscribe input[type="submit"] {
+  float: right;
+  font-size: 0.846em;
+  font-weight: bold;
+  color: #000;
+  background: #fff;
+  position: relative;
+  margin: 0;
+  padding: 7px 10px;
+  position: relative;
+  top: -44px;
+  right: 3px;
+  border: none;
+}
+
+.widget.subscribe input[type="submit"]:hover {
+  opacity: 0.80;
+  -moz-opacity: 0.80;
+  filter:alpha(opacity=80);
+}
+ */
+
+/* Flickr Widget */
+.flickr-block-set-title{
+display: none;
+}
+
+.flickr-no-title{
+display: none;
+}
+.flickr-credit{
+display: none;
+}
+
+.widget.flickr div {
+  margin: 0 -10px -10px 0;
+}
+.widget.flickr div a{
+  float: left;
+  margin: 0 10px 10px 0;
+}
+#footer .widget.flickr  {
+  margin: 0 -9px -9px 0;
+}
+#footer .widget.flickr div a {
+  float: left;
+  margin: 0 19px 19px 0;
+}
+.widget.flickr div a,
+.widget.flickr div img {
+  display: block;
+}
+.widget.flickr div a:hover {
+  background: #b6d82f;
+  opacity: 0.80;
+  -moz-opacity: 0.80;
+  filter:alpha(opacity=80);
+}
+
+/* About Us Widget */
+.block-views-about-us-block{
+padding-left: 30px;
+}
+.widget.about-us span,
+.contact-info span {
+  display: block;
+  margin-bottom: 10px;
+  line-height: 17px;
+  padding-left: 10px;
+  background: transparent no-repeat left center;
+}
+.widget.about-us span a,
+.contact-info span a {
+  color: #fff;
+  text-decoration: underline;
+}
+span.address {
+  background-image: url(../images/home-icon.png) !important;
+}
+span.phone {
+  background-image: url(../images/phone1-icon.png) !important;
+}
+
+span.mail {
+  background-image: url(../images/mail-icon.png) !important;
+}
+
+/* Contact Us Widget */
+.widget.contact-us input[type="text"] {
+  float: left;
+  font-size: 0.846em;
+  padding: 10px;
+  background: #888;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  width: 48%;
+  margin-bottom: 11px;
+  border: none;
+}
+
+.widget.contact-us input[type="text"] {
+  float: right;
+}
+.widget.contact-us select{
+  border-radius: 5px;
+  outline: none;
+  font-family: 'Open Sans';
+  color: #4e5257555;
+  font-size: 12px;
+  padding: 15px 15px;
+  border: 1px solid #d9d9d9;
+  background: #f9f9f9;
+}
+.widget.contact-us input[type="email"] {
+  float: right;
+  font-size: 0.846em;
+  padding: 10px;
+  background: #888;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  width: 48%;
+  margin-bottom: 11px;
+  border: none;
+}
+.widget.contact-us input[type="text"]:first-child {
+  float: left;
+}
+
+.widget.contact-us textarea {
+  clear:both;
+  height: 80px;
+  min-height: 80px;
+  background: #888;
+  background: rgba(0,0,0,0.5);
+  color: #fff;
+  border: 0px;
+  padding: 10px;
+}
+/*
+.widget.contact-us input[type="submit"] {
+  float: right;
+  font-size: 0.846em;
+  font-weight: bold;
+  color: #000;
+  background: #fff;
+  position: relative;
+  margin: 0;
+  padding: 7px 15px;
+  border: none;
+}
+
+.widget.contact-us input[type="submit"]:hover {
+  opacity: 0.80;
+  -moz-opacity: 0.80;
+  filter:alpha(opacity=80);
+}
+*/

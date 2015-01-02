@@ -1,0 +1,18 @@
+<?php
+/**
+ * @file
+ * The Flickr uninstall hook
+ */
+
+/**
+ * Implements hook_install().
+ */
+function flickr_block_uninstall() {
+  variable_del("flickr_block_refresh_random");
+  variable_del("flickr_block_refresh_others");
+  variable_del('flickr_block_heading');
+  variable_del('flickr_block_hide_empty');
+  foreach (range(0, 14) as $delta) {
+    variable_del("flickr_block_{$delta}");
+  }
+}

@@ -1,0 +1,14 @@
+<?php
+
+/**
+ * @file
+ * Install/uninstall functions for ULearn settings module.
+ */
+
+/**
+ * Remove redirect for register page.
+ */
+function ulearn_settings_update_7100(&$sandbox) {
+  $path = 'user/register';
+  redirect_delete_by_path($path);
+}

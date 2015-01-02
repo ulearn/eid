@@ -1,0 +1,1 @@
+[24-Oct-2014 10:41:08 America/New_York] PHP Fatal error:  Class 'CRM_Core_ClassLoader' not found in /home/stage/public_html/sites/all/modules/contrib/civicrm/install/index.php on line 77

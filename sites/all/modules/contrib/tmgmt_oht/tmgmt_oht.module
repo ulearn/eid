@@ -1,0 +1,137 @@
+<?php
+
+/**
+ * @file
+ * Module file of the translation management OHT module.
+ *
+ * http://onehourtranslation.com/
+ *
+ * Implemented by Artem Berdishev, AMgrade
+ */
+
+/**
+ * Implements hook_tmgmt_translator_plugin_info().
+ */
+function tmgmt_oht_tmgmt_translator_plugin_info() {
+  return array(
+    'oht' => array(
+      'label' => t('OHT translator'),
+      'description' => t('A OneHourTranslation translator service.'),
+      'plugin controller class' => 'TMGMTOhtPluginController',
+      'ui controller class' => 'TMGMTOhtTranslatorUIController',
+    ),
+  );
+}
+
+/**
+ * Submit callback to add new comment to an OHT project.
+ */
+function tmgmt_oht_add_comment_form_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+
+  /* @var TMGMTJobItem $job_item */
+  $job_item = $form_state['item'];
+  /* @var TMGMTOhtPluginController $controller */
+  $controller = $job_item->getTranslatorController();
+  $connector = $controller->getConnector($job_item->getTranslator());
+
+  $mappings = $job_item->getRemoteMappings();
+
+  try {
+    /* @var TMGMTRemote $mapping */
+    $mapping = array_shift($mappings);
+    $connector->addProjectComment($mapping->remote_identifier_1, $form_state['values']['comment']);
+  }
+  catch (TMGMTOHTException $e) {
+    drupal_set_message(check_plain($e->getMessage()), 'error');
+  }
+
+  $form_state['comment_submitted'] = 1;
+}
+
+/**
+ * Ajax callback for the OHT comment form.
+ */
+function tmgmt_oht_review_form_ajax($form, &$form_state) {
+  return $form['oht_comments']['container'];
+}
+
+/**
+ * Implements hook_menu().
+ */
+function tmgmt_oht_menu() {
+  return array(
+    'tmgmt_oht_callback' => array(
+      'title' => 'TMGMT OHT Callback',
+      'description' => '',
+      'page callback' => 'tmgmt_oht_callback',
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK,
+    ),
+  );
+}
+
+/**
+ * Callback for OHT requests.
+ */
+function tmgmt_oht_callback() {
+  // If translation submitted - handle it.
+  if ($_POST['event'] == 'project.resources.new' && $_POST['resource_type'] == 'translation') {
+    /**
+     * @var TMGMTJobItem $job_item The job object.
+     */
+    if ($_POST['custom1'] == tmgmt_oht_hash($_POST['custom0']) &&  $job_item = tmgmt_job_item_load($_POST['custom0'])) {
+
+      /**
+       * @var TMGMTOhtPluginController $oht The translator object.
+       */
+      $oht = $job_item->getTranslator()->getController();
+      $oht->retrieveTranslation(array($_POST['resource_uuid']), $job_item, $_POST['project_id']);
+    }
+    else {
+      watchdog('tmgmt_oht', 'Wrong call for submitting translation for job item %id', array('%id' => $job_item->tjiid), WATCHDOG_WARNING);
+    }
+  }
+
+  // TODO - how do we do this?
+  // Otherwise - add message about status changing.
+//  elseif ($_POST['type'] == 'status_change') {
+//    $job_item = tmgmt_job_load($_POST['custom0']);
+//    if (!empty($job_item) && $_POST['custom1'] == tmgmt_oht_hash($job_item->tjid)) {
+//      $job_item->addMessage('Status for project %project changed to %status. Estimated finish: @finish',
+//        array(
+//          '%project' => $_POST['project_id'],
+//          '%status' => $_POST['project_status'],
+//          '@finish' => format_date($_POST['estimate_finish']),
+//        )
+//      );
+//    }
+//    else {
+//      watchdog('tmgmt', 'Wrong query for updating job %job_id status', array('%job_id' => $job_item->tjid), WATCHDOG_WARNING);
+//    }
+//  }
+  drupal_exit();
+}
+
+/**
+ * Create secret hash for OHT reference.
+ */
+function tmgmt_oht_hash($id) {
+  return md5(drupal_get_hash_salt() . $id);
+}
+
+/**
+ * TMGMT OHT Exception class
+ */
+class TMGMTOHTException extends Exception {
+
+  /**
+   * @param string $message
+   * @param array $data
+   *   Associative array of dynamic data that will be inserted into $message.
+   * @param int $code
+   */
+  function __construct($message = "", $data = array(), $code = 0) {
+    parent::__construct(strtr($message, $data), $code);
+  }
+}

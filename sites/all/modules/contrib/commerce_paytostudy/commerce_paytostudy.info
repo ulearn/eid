@@ -1,0 +1,8 @@
+name = Commerce Pay to Study
+description = Provides Pay to Study payment method for Drupal Commerce.
+package = Commerce
+dependencies[] = commerce
+dependencies[] = commerce_payment
+files[] = commerce_paytostudy.inc
+
+core = 7.x

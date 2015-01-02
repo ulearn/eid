@@ -1,0 +1,69 @@
+<?php
+/**
+ * @file
+ * Code for the ULearn Special Courses feature.
+ */
+
+include_once 'ulearn_special_courses.features.inc';
+
+/**
+ * Implements hook_form_alter().
+ */
+function ulearn_special_courses_form_alter(&$form, &$form_state, $form_id) {
+  // Commerce checkout registration form.
+  if ($form_id == 'commerce_checkout_form_registration') {
+    global $user;
+    foreach ($form['registration_information'] as $key => &$registration_info) {
+      if (is_array($registration_info)) {
+        foreach ($registration_info as $reg_id => &$element) {
+          if (is_array($element) && isset($element['register_for']) && in_array('student', $user->roles)) {
+            $element['register_for']['#default_value'] = 'registration_registrant_type_me';
+            $element['register_for']['#access'] = FALSE;
+          }
+          if (!empty($element['#entity']->order_id)) {
+            $order_id = $element['#entity']->order_id;
+            $product = commerce_product_load($element['#entity']->entity_id);
+            // Do this only for special courses.
+            if ($product->type == 'special_course') {
+              // We will need to load line item since date fields are in line item.
+              // Use EntityFieldQuery since there is no other way to load line item.
+              $query = new EntityFieldQuery();
+              $query->entityCondition('entity_type', 'commerce_line_item')
+                ->entityCondition('bundle', 'special_courses')
+                ->propertyCondition('order_id', $order_id)
+                ->fieldCondition('commerce_product', 'product_id', $product->product_id, '=')
+                ->range(0, 1)
+                ->addMetaData('account', user_load(1)); // Run the query as user 1.
+              $result = $query->execute();
+              if (isset($result['commerce_line_item'])) {
+                $line_item_data = array_shift($result['commerce_line_item']);
+                $line_item = commerce_line_item_load($line_item_data->line_item_id);
+                $pricing_attributes = unserialize($line_item->commerce_pricing_attributes);
+                $weeks = $pricing_attributes['week_options']['field_course_week_options'];
+                $start_date = $line_item->field_batch_start_date[LANGUAGE_NONE][0]['value'];
+                $start_date_timestamp = strtotime($start_date);
+                // Calculate batch end date.
+                $end_date_timestamp = strtotime('+' . $weeks . ' weeks', $start_date_timestamp);
+                // Get formatted date to set default values in
+                // enrollment date field and to display on markup.
+                $value = format_date($start_date_timestamp, 'custom', 'Y-m-d 00:00:00');
+                $value2 = format_date($end_date_timestamp, 'custom', 'Y-m-d 00:00:00');
+                // Set default values and hide the date fields.
+                $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#default_value']['value'] = $value;
+                $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#default_value']['value2'] = $value2;
+                $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#date_items']['value'] = $value;
+                $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#date_items']['value2'] = $value2;
+                $element['field_registrant_enrollment_date']['#access'] = FALSE;
+                // Show markup for enrollment date.
+                $element['ulearn_course_enrollment_markup'] = array(
+                  '#markup' => '<div class="ulearn-course-enrollment-markup field-label-inline"><label class="field-label">' . $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#title'] . ':</label>&nbsp' . ulearn_settings_date_diff($start_date_timestamp, $end_date_timestamp, TRUE),
+                  '#weight' => $element['field_registrant_enrollment_date'][LANGUAGE_NONE][0]['#weight'],
+                );
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

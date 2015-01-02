@@ -1,0 +1,246 @@
+<?php
+/**
+ * @file
+ * Creates default content.
+ */
+
+/**
+ * Implements hook_install
+ */
+function ulearn_default_content_install() {
+  // Create default users.
+  ulearn_default_content_default_users();
+  // Create default taxonomy terms.
+  ulearn_default_content_default_terms();
+  // Enable default blocks.
+  ulearn_default_content_default_blocks();
+  // Enbale default blocks for ULearn.
+  ulearn_default_content_enable_blocks();
+}
+
+/**
+ * Enable commerce registration module with its dependencies.
+ */
+function ulearn_default_content_update_7000(&$sandbox) {
+  module_enable(array('commerce_registration'));
+}
+
+/**
+ * Enable commerce pricing attributes and field collection
+ * modules with its dependencies.
+ */
+function ulearn_default_content_update_7001(&$sandbox) {
+  module_enable(array('field_collection', 'commerce_pricing_attributes'));
+}
+
+/**
+ * Create commerce option set as those are not exportable yet.
+ */
+function ulearn_default_content_update_7002(&$sandbox) {
+  $existing_set = commerce_option_set_load('week_options');
+  if (!$existing_set) {
+    $option_set = new CommerceOptionSet();
+    $option_set->is_new = TRUE;
+    $option_set->set_id = 'week_options';
+    $option_set->name = 'Week options';
+    commerce_option_set_save($option_set);
+  }
+}
+
+/**
+ * Removes and creates Week options field to change its allowed values.
+ * This will also delete data for this field.
+ */
+function ulearn_default_content_update_7003(&$sandbox) {
+  // Lets mark the field, its instances and its data for deletion.
+  field_delete_field('field_course_week_options');
+  // Refresh the 'active' status of fields.
+  field_sync_field_status();
+  // Do a pass of purging on deleted Field API data, if any exists.
+  $limit = variable_get('field_purge_batch_size', 10);
+  // Purge a batch of deleted Field API data, instances, or fields.
+  field_purge_batch($limit);
+  // Revert feature to generate the field again.
+  features_revert(array('ulearn_commerce' => array('field_base', 'field_instance')));
+}
+
+/**
+ * Place language switcher block in top left region and configure it.
+ */
+function ulearn_default_content_update_7004(&$sandbox) {
+  $default_theme = variable_get('theme_default', 'goodnex_sub');
+  $blocks = array(
+    array(
+      'module' => 'locale',
+      'delta' => 'language',
+      'theme' => $default_theme,
+      'status' => BLOCK_CUSTOM_ENABLED,
+      'weight' => 0,
+      'region' => 'header_top_left',
+      'title' => '<none>',
+      'visibility' => BLOCK_VISIBILITY_NOTLISTED,
+      'cache' => DRUPAL_NO_CACHE,
+    ),
+  );
+  module_load_include('inc', 'ulearn_settings', 'ulearn_settings');
+  ulearn_settings_block_enable($blocks);
+
+  // Set hideout settings for language block.
+  variable_set('lang_dropdown_hideout_language', array('hidden_languages' => array()));
+
+  // Revert the strongarm variables.
+  features_revert(array('ulearn_locale' => array('variable')));
+}
+
+/**
+ * Enable default blocks.
+ */
+function ulearn_default_content_default_blocks() {
+  $default_theme = variable_get('theme_default', 'goodnex_sub');
+  $default_blocks = array(
+    // Main block.
+    array(
+      'fields' => array(
+        'status' => 1,
+        'region' => 'content',
+      ),
+      'keys' => array(
+        'module' => 'system',
+        'delta' => 'main',
+        'theme' => $default_theme,
+      ),
+    ),
+    // User login block.
+    array(
+      'fields' => array(
+        'status' => 1,
+        'region' => 'sidebar_left',
+        'title' => '<none>',
+      ),
+      'keys' => array(
+        'module' => 'user',
+        'delta' => 'login',
+        'theme' => $default_theme,
+      ),
+    ),
+    // Superfish block.
+    array(
+      'fields' => array(
+        'status' => 1,
+        'region' => 'header_menu',
+        'title' => '<none>',
+      ),
+      'keys' => array(
+        'module' => 'superfish',
+        'delta' => '1',
+        'theme' => $default_theme,
+      ),
+    ),
+    // Account links.
+    array(
+      'fields' => array(
+        'status' => 1,
+        'region' => 'header_right',
+        'title' => '<none>',
+      ),
+      'keys' => array(
+        'module' => 'ulearn_profile',
+        'delta' => 'ulearn_profile_user_links',
+        'theme' => $default_theme,
+      ),
+    ),
+    // Accommodation link.
+    array(
+      'fields' => array(
+        'status' => 1,
+        'region' => 'sidebar_right',
+        'title' => '<none>',
+        'weight' => 5,
+        'theme' => $default_theme,
+        'visibility' => BLOCK_VISIBILITY_LISTED,
+        'pages' => 'cart',
+      ),
+      'keys' => array(
+        'module' => 'ulearn_accommodation',
+        'delta' => 'accommodation_link',
+        'theme' => $default_theme,
+      ),
+    ),
+  );
+
+  foreach ($default_blocks as $block) {
+    db_merge('block')->key($block['keys'])->fields($block['fields'])->execute();
+  }
+}
+
+/**
+ * Enable blocks for ULearn.
+ */
+function ulearn_default_content_enable_blocks() {
+  //Enable blocks and place in regions.
+  $default_theme = 'goodnex_sub';
+  $blocks = array(
+    array(
+      'module' => 'views',
+      'delta' => 'blogs-block_blog_listing',
+      'theme' => $default_theme,
+      'status' => BLOCK_CUSTOM_ENABLED,
+      'weight' => 0,
+      'region' => 'sidebar_right',
+      'title' => '<none>',
+      'visibility' => BLOCK_VISIBILITY_LISTED,
+      'pages' => 'school/*',
+      'cache' => DRUPAL_NO_CACHE,
+    ),
+    array(
+      'module' => 'views',
+      'delta' => '8e39d2acc5630f562355f3229cf111d4',
+      'theme' => $default_theme,
+      'status' => BLOCK_CUSTOM_ENABLED,
+      'weight' => 1,
+      'region' => 'before_content',
+      'title' => '<none>',
+      'visibility' => BLOCK_VISIBILITY_LISTED,
+      'pages' => '<front>',
+      'cache' => DRUPAL_NO_CACHE,
+    ),
+    array(
+      'module' => 'views',
+      'delta' => '1c4d0768919f6e551af155a267cfffac',
+      'theme' => $default_theme,
+      'status' => BLOCK_CUSTOM_ENABLED,
+      'weight' => 10,
+      'region' => 'content',
+      'title' => '',
+      'visibility' => BLOCK_VISIBILITY_LISTED,
+      'pages' => 'registration/*',
+      'cache' => DRUPAL_NO_CACHE,
+    ),
+    array(
+      'module' => 'commerce_multicurrency',
+      'delta' => 'currency_selector',
+      'theme' => $default_theme,
+      'status' => BLOCK_CUSTOM_ENABLED,
+      'weight' => 5,
+      'region' => 'header_right',
+      'title' => 'Change currency',
+      'visibility' => 0,
+      'pages' => '',
+      'cache' => DRUPAL_NO_CACHE,
+    ),
+    array(
+      'module' => 'views',
+      'delta' => '3342dc0c28bee06bb85f575280bc82f1',
+      'theme' => $default_theme,
+      'status' => BLOCK_CUSTOM_ENABLED,
+      'weight' => -22,
+      'region' => 'sidebar_right',
+      'title' => '<none>',
+      'visibility' => BLOCK_VISIBILITY_LISTED,
+      'pages' => '<front>',
+      'cache' => DRUPAL_NO_CACHE,
+    ),
+  );
+  module_load_include('inc', 'ulearn_settings', 'ulearn_settings');
+  ulearn_settings_block_enable($blocks);
+}

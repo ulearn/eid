@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="iso-8859-1" ?>
+<menu>
+ <item>
+     <path>civicrm/attendance/search</path>
+     <title>Dashboard</title>
+     <page_callback>CRM_Attendance_Controller_Search</page_callback>
+      <page_type>1</page_type>
+     <weight>700</weight>
+     <component>CiviAttendance</component>
+  </item>
+  <item>
+     <path>civicrm/contact/view/attendance</path>
+     <path_arguments>force=1,cid=%%cid%%</path_arguments>
+     <title>Attendance</title>
+     <page_callback>CRM_Attendance_Page_Tab</page_callback>
+     <weight>2</weight>
+  </item>
+</menu>

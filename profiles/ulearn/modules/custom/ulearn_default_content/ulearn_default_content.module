@@ -1,0 +1,83 @@
+<?php
+/**
+ * @file
+ * Contains functions required to create default content.
+ */
+
+/**
+ * Create default users.
+ */
+function ulearn_default_content_default_users() {
+  // Get all roles.
+  $roles = user_roles();  
+  $ulearnadmin = array_search("ulearn admin", $roles);
+  $student = array_search("student", $roles);  
+  $edit = array(
+    'ulearnadmin' => array(
+      'name' => 'ulearnadmin',
+      'pass' => 'ulearnadmin',
+      'mail' => 'ulearnadmin@example.com',
+      'status' => 1,
+      'init' => 'ulearnadmin@example.com',
+      'roles' => array($ulearnadmin => 'ulearn admin'),
+    ),
+    'student' => array(
+      'name' => 'student',
+      'pass' => 'student',
+      'mail' => 'student@example.com',
+      'status' => 1,
+      'init' => 'student@example.com',
+      'roles' => array($student => 'student'),
+    ),
+  );
+  foreach ($edit as $newuser) {
+    user_save(NULL, $newuser);
+  }
+}
+
+/**
+ * Prepares and create default taxonomy terms.
+ */
+function ulearn_default_content_default_terms() {
+  $term_data = array();
+  // Prepare array for terms.
+  $term_data = array(
+    array(
+      'vocab_name' => 'course_type',
+      'terms' => array('General language', 'Exam Course', 'Longterm Course'),
+    ),
+    array(
+      'vocab_name' => 'accommodation_type',
+      'terms' => array('HOST', 'HOST (Share)', 'APARTMENT', 'APARTMENT (Shared)', 'CITY HOSTEL'),
+    ),
+    array(
+      'vocab_name' => 'course_room_type',
+      'terms' => array('Single', 'Twin (2 Beds)', 'Double (1 Bed)'),
+    ),
+    //array(
+    //  'vocab_name' => VOCABULARY_MACHINE_NAME,
+    //  'terms' => array(TERM 1, TERM 2, TERM 3),
+    //),
+  );
+
+  foreach ($term_data as $data) {
+    ulearn_default_content_default_taxonomy_terms($data['vocab_name'], $data['terms']);
+  }
+}
+
+/**
+ * Create default terms in provided vocabulary.
+ */
+function ulearn_default_content_default_taxonomy_terms($vocab_name, $terms = array()) {
+  if (!empty($terms) && $vocabulary = taxonomy_vocabulary_machine_name_load($vocab_name)) {
+    foreach ($terms as $term_name) {
+      $term = new stdClass();
+      $term->name = $term_name;
+      $term->vid = $vocabulary->vid;
+      if ($vocab_name == 'school_amenities') {
+        $term->field_school_term_machine_name[LANGUAGE_NONE][0]['value'] = drupal_strtolower(str_replace(array(' ', '-'), '_', $term_name));
+      }
+      taxonomy_term_save($term);
+    }
+  }
+}

@@ -1,0 +1,11 @@
+#wistia-status {
+    clear: both;
+}
+#media-tab-wistia #container {
+    padding: 20px 0;
+}
+#media-tab-wistia #container #scrollbox {
+    height: 300px;
+    overflow: auto;
+    overflow-x: hidden;
+}

@@ -1,0 +1,55 @@
+<?php
+/**
+ * @file
+ * Provides the possibility to manage limited time offers.
+ */
+
+/**
+ * Implements hook_schema().
+ */
+function commerce_lto_schema() {
+  $schema['cache_commerce_lto'] = drupal_get_schema_unprocessed('system', 'cache');
+  $schema['cache_commerce_lto']['description'] = 'Cache table used to store information display manipulations that are in-progress.';
+  return $schema;
+}
+
+/**
+ * Implements hook_install().
+ */
+function commerce_lto_install() {
+  variable_set('commerce_lto_time_units', array(
+    'day' => 3600 * 24,
+    'week' => 3600 * 24 * 7,
+    'month' => 3600 * 24 * 7 * 30,
+    'year' => 3600 * 24 * 7 * 30 * 365,
+  ));
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function commerce_lto_uninstall() {
+  // Make sure the cardinality is set to default.
+  if (variable_get('commerce_lto_force_cardinality', FALSE)) {
+    $field_info = field_info_field('commerce_price');
+    $field_info['cardinality'] = 1;
+    field_update_field($field_info);
+  }
+
+  // Instead deleting the field and all data tell the user what to do.
+  drupal_set_message(
+    t(
+      'The field %field_name on the commerce line items was not deleted to ' .
+      'prevent data loss. But you can delete it manually if applicable.',
+      array('%field_name' => 'commerce_lto_date_range')
+    ),
+    'warning',
+    FALSE
+  );
+
+  variable_del('commerce_lto_enabled_fields');
+  variable_del('commerce_lto_time_units');
+  variable_del('commerce_lto_enable_cache');
+  variable_del('commerce_lto_cache_expiration');
+  variable_del('commerce_lto_force_cardinality');
+}

@@ -1,0 +1,163 @@
+<?php
+/**
+ * @file
+ * Code for the ulearn Profile feature.
+ */
+
+include_once 'ulearn_profile.features.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function ulearn_profile_menu() {
+  $items = array();
+  $items['admin/config/ulearn/variables/user'] = array(
+    'title' => 'User variables',
+    'description' => 'User variable.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('variable_group_form', 'user_mails'),
+    'access arguments' => array('administer ulearn'),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_field_default_field_instances_alter().
+ */
+function ulearn_profile_field_default_field_instances_alter(&$instances) {
+  // Alter the default field instances to set default image for
+  // user right before they are cached into the database.
+  // @see https://drupal.org/node/1439136#comment-6524566.
+
+  // Source directory for user picture.
+  $source_dir = drupal_get_path('module', 'ulearn_profile') . '/images/';
+  // Default fields and images.
+  $field_default_image = array(
+    'user-user-field_user_picture' => 'default_user_pic.png',
+  );
+  foreach ($field_default_image as $field_name => $filename) {
+    $source = $source_dir . $filename;
+    $destination = 'default_images';
+    if (isset($instances[$field_name])) {
+      ulearn_settings_set_default_image($instances[$field_name], $filename, $source, $destination);
+    }
+  }
+}
+
+/**
+ * Implements hook_strongarm_alter().
+ */
+function ulearn_profile_strongarm_alter(&$items) {
+  // Override user default image if default user picture variable is exported.
+  if (isset($items['user_picture_default'])) {
+    $field_info = field_info_instance('user', 'field_user_picture', 'user');
+    if ($fid = $field_info['settings']['default_image']) {
+      $file = file_load($fid);
+      $items['user_picture_default']->value = $file->uri;
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function ulearn_profile_form_user_profile_form_alter(&$form, &$form_state, $form_id) {
+  // Disable contact form and locale settings fieldsets for
+  // users who don't have permission to administer users.
+  $can_access = user_access('administer users');
+  $form['contact_entityform_set']['#access'] = $can_access;
+  $form['timezone']['#access'] = $can_access;
+}
+
+/**
+ * Implements hook_workbench_content_alter().
+ */
+function ulearn_profile_workbench_content_alter(&$output) {
+  // Replace the default "Recent Content" view with our custom View.
+  $output['workbench_recent_content']['#view'] = 'ulearn_workbench_recent_content';
+  $output['workbench_recent_content']['#view_display'] = 'block_workbench_recent';
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function ulearn_profile_block_info() {
+  $blocks = array();
+  $blocks['ulearn_profile_user_links'] = array(
+    'info' => t('ULearn profile: User account links'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function ulearn_profile_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'ulearn_profile_user_links':
+      if (!user_is_anonymous()) {
+        $output = '';
+        $output .= '<div class="ulearn-user-links">';
+        global $user;
+        $realname = realname_load($user);
+        // Use username if realname not exists.
+        if (!$realname) {
+          $realname = $user->name;
+        }
+        // Get user picture uri.
+        $uri = ulearn_profile_user_picture_uri($user->uid);
+        if ($uri) {
+          $output .= theme('image_style', array('style_name' => 'user_picture_small', 'path' => $uri, 'alt' => $realname, 'title' => $realname));
+        }
+        // Create popup for user account links.
+        $items = array();
+        // Show my registrations link only to students.
+        if (in_array('student', $user->roles)) {
+          $items[] = l(t('My registrations'), 'course-registrations');
+          $items[] = l(t('Course calender'), 'course-schedules');
+        }
+        $items[] = l(t('My profile'), 'user/' . $user->uid);
+        $items[] = l(t('Edit profile'), 'user/' . $user->uid . '/edit');
+        $items[] = l(t('Logout'), 'user/logout');
+        module_load_include('inc', 'popup', '/includes/popup.api');
+        // Prepare attributes for popup.
+        $attributes = array(
+          'class' => 'popup-element-body-ulearn-user-links',
+          'effect' => 'slide-down-fade',
+          'activate' => 'hover',
+       );
+        $output .= '<span class="ulearn-greet-link">' . t('Hello') . '</span>' . popup_element($realname,  theme('item_list', array('items' => $items, 'type' => 'ul')), $attributes);
+        $output .= '</div>';
+
+        $block['subject'] = NULL;
+        $block['content'] = $output;
+      break;
+    }
+  }
+  return $block;
+}
+
+/**
+ * API
+ */
+
+/**
+ * Get user picture uri.
+ */
+function ulearn_profile_user_picture_uri($uid) {
+  $account = user_load($uid);
+  if (isset($account->field_user_picture[LANGUAGE_NONE][0]['uri'])) {
+    return $account->field_user_picture[LANGUAGE_NONE][0]['uri'];
+  }
+  else {
+    $instance = field_info_instance('user', 'field_user_picture', 'user');
+    if (!empty($instance['settings']['default_image'])) {
+      $image = file_load($instance['settings']['default_image']);
+      if (isset($image->uri)) {
+        return $image->uri;
+      }
+    }
+  }
+}

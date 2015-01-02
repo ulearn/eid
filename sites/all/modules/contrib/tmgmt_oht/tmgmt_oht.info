@@ -1,0 +1,16 @@
+name = One Hour Translation translator
+description = One Hour Translation service plugin for TMGMT. Sign up at <a href="http://onehourtranslation.com/">onehourtranslation.com</a>!
+package = Translation Management
+core = 7.x
+dependencies[] = tmgmt
+
+files[] = tmgmt_oht.connector.inc
+files[] = tmgmt_oht.plugin.inc
+files[] = tmgmt_oht.ui.inc
+
+; Information added by drupal.org packaging script on 2013-10-30
+version = "7.x-1.0-beta1+10-dev"
+core = "7.x"
+project = "tmgmt_oht"
+datestamp = "1383140727"
+

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the ULearn Slideshow feature.
+ */
+
+include_once 'ulearn_slideshow.features.inc';

@@ -1,0 +1,42 @@
+# Ignore paths that contain user-generated content.
+/sites/default/settings.php
+/sites/default/civicrm.settings.php
+/sites/default/files/civicrm/*
+/sites/default/files/civicrm/templates_c/*
+/sites/default/files/xmlsitemap/*
+# ** Only works in OSs that support newer versions of fnmatch (Bash 4+)
+
+
+# Packages #
+############
+*.7z
+*.dmg
+*.gz
+*.bz2
+*.iso
+*.jar
+*.rar
+*.tar
+*.zip
+*.tgz
+
+# Logs and databases #
+######################
+*.log
+*.sql
+
+# OS generated files #
+######################
+.DS_Store*
+ehthumbs.db
+Icon?
+Thumbs.db
+._*
+
+# Vim generated files #
+######################
+*.un~
+
+# SASS #
+##########
+.sass-cache

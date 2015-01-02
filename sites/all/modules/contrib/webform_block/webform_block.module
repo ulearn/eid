@@ -1,0 +1,26 @@
+<?php
+
+/**
+ * Implements hook_block_info().
+ */
+function webform_block_block_info() {
+  $blocks['current'] = array(
+    'info' => t('Current webform block'),
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function webform_block_block_view($delta = '') {
+
+  $node = menu_get_object();
+  if (!isset($node->nid)) {
+    return;
+  }
+  webform_node_view($node, 'full');
+  $block['subject'] = NULL;
+  $block['content'] = isset($node->content['webform']) ? $node->content['webform'] : NULL;
+  return $block;
+}

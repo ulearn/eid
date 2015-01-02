@@ -1,0 +1,981 @@
+<?php 
+/**
+ * @file
+ * Implements 3-D Secure features for Drupal Commerce.
+ *
+ * This module uses the Commerce Payment method hooks, but does not
+ * actually define a payment method.
+ */
+
+define('COMMERCE_3D_SECURE_STATUS_3DS', '3ds');
+
+/** 
+ * Implements hook_menu
+ */
+function commerce_3d_secure_menu() {
+  $items = array();
+
+  $items['commerce_3d_secure/3d_secure_waiting_page'] = array(
+    'page callback' => 'commerce_3d_secure_waiting_page',
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  $items['commerce_3d_secure/term_callback/%'] = array(
+    'page callback' => 'commerce_3d_secure_term_callback',
+    'page arguments' => array(2),
+    'access arguments' => array('access content'),
+    'type' => MENU_CALLBACK,
+  );
+  
+  return $items;
+}
+
+
+/**
+ * Implements hook_commerce_checkout_router 
+ */
+function commerce_3d_secure_commerce_checkout_router($order, $checkout_page) {
+  // Check if we have an active 3D Secure request from a payment module.
+  // If we don't, skip this page and move onto the next in the checkout process.
+  if ($checkout_page['page_id'] == '3d_secure') {
+    
+    // If there is 3D Authentication required, the payment module should have placed an array
+    // in an order object field called 'extra_authorisation'
+    // This additional data will not be stored permanently, just utilised for this transaction.
+    // The array should contain the following 4 fields:
+    // 1) PAReq
+    // 2) ACSURL
+    // 3) MD
+    // 4) Term URL
+    // If the array is not present in the order object or any of the 4 fields are missing, we 
+    // skip straight past the checkout page.
+    $skip_3d_secure = FALSE;
+  
+    if (!isset($order->data['extra_authorisation'])) {
+      $skip_3d_secure = TRUE;
+    }
+    else {
+      if (!isset($order->data['extra_authorisation']['PAReq']) || 
+          !isset($order->data['extra_authorisation']['ACSURL']) || 
+          !isset($order->data['extra_authorisation']['MD']) ||
+          !isset($order->data['extra_authorisation']['TermUrl'])) {
+        watchdog('commerce_3d_secure', 'Only partial 3D Secure Data present, cannot proceed so skipping this step', array(), WATCHDOG_WARNING);  
+        $skip_3d_secure = TRUE;
+      }       
+    }
+
+    if ($skip_3d_secure) {
+      // if there are no 3d secure markers in the order, we're done. Go to checkout completion page or to the offsite redirect page.
+      $checkout_pages = commerce_checkout_pages();
+      $next_step =  $checkout_pages['3d_secure']['next_page'];
+      commerce_order_status_update($order, 'checkout_' . $next_step);
+      drupal_goto('checkout/' . $order->order_number . '/' . $next_step);
+    }
+  }
+}
+
+/**
+ * Implements hook_commerce_checkout_page_info
+ */
+function commerce_3d_secure_commerce_checkout_page_info() {
+  $checkout_pages = array();
+  
+  // Define an additional Checkout page for 3D Secure authentication
+  // Add at a default weight of 15 so it appears before the thank you page
+  // which has a default weight of 20.
+  $checkout_pages['3d_secure'] = array(
+    'title' => t('3D Secure Authentication'),
+    'help' =>
+      t('Your payment card provider has requested some additional security
+         details. Do not click the refresh or back button or this transaction
+         may be interrupted or cancelled.'),
+    'status_cart' => FALSE,
+    'locked' => TRUE,
+    'buttons' => FALSE,
+    'weight' => 15,
+  );
+  return $checkout_pages;
+}
+
+/**
+ * Implements hook_commerce_checkout_pane_info
+ */
+function commerce_3d_secure_commerce_checkout_pane_info() {
+  $checkout_panes = array();
+
+  $checkout_panes['3d_secure'] = array(
+    'title' => t('3D Secure Authentication'),
+    'module' => 'commerce_3d_secure',
+    'page' => '3d_secure',
+    'collapsible' => FALSE,
+    'collapsed' => FALSE,
+    'weight' => 0,
+    'enabled' => TRUE,
+    'review' => FALSE,
+    'base' => 'commerce_3d_secure_pane',
+    'callbacks' => array('checkout_form'),
+  );
+  
+  $checkout_panes['3d_secure_programs'] = array(
+    'title' => t('Card Authentication'),
+    'page' => 'review',
+    'weight' => 10,
+    'base' => 'commerce_3d_secure_programs_pane',
+  );
+
+  return $checkout_panes;
+}
+
+/**
+ * Implements hook_settings_form().
+ */
+function commerce_3d_secure_programs_pane_settings_form($checkout_pane) {
+  $options = array();
+  $programs = commerce_3d_secure_programs();
+
+  foreach ($programs as $program_id => $program) {
+    $options[$program_id] = $program['title'];
+  }
+  
+  $form['commerce_3d_secure_enabled_programs'] = array(
+    '#type' => 'checkboxes',
+    '#title' => t('Enabled programs'),
+    '#description' => t('3-D Secure programs to show <em>learn more</em> links for.'),
+    '#options' => $options,
+    '#default_value' => variable_get('commerce_3d_secure_enabled_programs'),
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_checkout_form().
+ */
+function commerce_3d_secure_programs_pane_checkout_form($form, &$form_state, $checkout_pane, $order) {
+  $pane_form = array();
+  
+  $programs = commerce_3d_secure_programs();
+  $enabled_programs = variable_get('commerce_3d_secure_enabled_programs');
+  $items = array();
+  $programs_string = '';
+
+  $i = 0;
+  
+  foreach ($enabled_programs as $program_id => $enabled) {
+    if (strcmp($program_id, $enabled) == 0) {
+      if (isset($programs[$program_id])) {
+        $program = $programs[$program_id];
+        $img = '<img src="' . $program['image_url'] . '" />';
+        $items[] = l($img, $program['text_url'], array(
+          'html' => TRUE,
+          'attributes' => array(
+            'target' => '_blank',
+            //'onclick' => 'open("' . $program['text_url'] . '","view","height=450,width=550");'
+          )
+        ));
+
+        if ($i == 0) {
+          $programs_string = $program['title'];
+        }
+        elseif ($i == count($programs) - 1) {
+          $programs_string .= ' ' . t('or @program_title', array('@program_title' => $program['title']));
+        }
+        else {
+          $programs_string .= ', ' . $program['title'];
+        }
+      }
+    }
+    $i++;
+  }
+
+  if (count($items) > 0) {
+    drupal_add_css(drupal_get_path('module', 'commerce_3d_secure') . '/commerce_3d_secure.css', 'file');
+    
+    $pane_form['3d_secure_programs_help'] = array(
+      '#type' => 'item',
+      '#markup' => '
+        <p>' .
+        t('Your card may be eligible or enrolled in @enabled_programs payer authentication programs. ' . 
+          'After continuing to the next step, your Card Issuer may prompt you for your payer authentication password to complete your purchase.',
+           array('@enabled_programs' => $programs_string)) .
+        '</p>'
+    );
+
+    $pane_form['3d_secure_programs_enabled'] = array(
+      '#type' => 'item',
+      '#markup' => theme('item_list', array('type' => 'ul', 'items' => $items)),
+    );
+  }
+
+  return $pane_form;
+}
+
+/**
+ * Implemented hook_checkout_form 
+ */
+function commerce_3d_secure_pane_checkout_form($form, &$form_state, $checkout_pane, $order) {
+  // Add the fields required for 3D Secure transaction. 
+  // These will have been sent back to the payment gateway module by the initial
+  // request for payment authentication. We are relying on the payment module having
+  // placed these variables in to the $order->data array.
+  // nb We already checked for this in the hook_router function above. 
+
+    drupal_add_js("window.onload = function() { document.forms['commerce-checkout-form-3d-secure'].submit(); }", 'inline');
+    drupal_add_css(drupal_get_path('module', 'commerce_3d_secure') . '/commerce_3d_secure.css', 'file');
+    
+    $form['PaReq'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $order->data['extra_authorisation']['PAReq'],
+    );
+  
+    $form['TermUrl'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $order->data['extra_authorisation']['TermUrl'],
+    );
+  
+    $form['MD'] = array(
+      '#type' => 'hidden',
+      '#default_value' => $order->data['extra_authorisation']['MD'],
+    );
+  
+    $form['submit'] = array(
+      '#type' => 'submit',
+      '#value' => 'Proceed with 3D Secure Authentication',
+      '#prefix' => '<noscript>',
+      '#suffix' => '</noscript>',
+    );
+  
+    $form['hidden_action'] = array(
+      '#type' => 'hidden',
+      '#value' => $order->data['extra_authorisation']['ACSURL'],
+    );
+
+    $form['iframe_3d_secure'] = array(
+      '#markup' =>
+        '<div id="iframe_3d_secure_wrapper">' .
+        '<iframe width="410" height="410" frameborder="0" name ="iframe_3d_secure" id ="iframe_3d_secure" src="' . 
+        url('commerce_3d_secure/3d_secure_waiting_page') . '" />' .
+        '</div>',
+    );
+    return $form;
+}
+
+/**
+ * Implements hook_form_alter
+ */
+function commerce_3d_secure_form_alter(&$form, &$form_state, $form_id) {
+  // Modify the checkout form so we can change the action to redirect offsite.
+  // Also rewrite the fields so they are at the top level of the form array where
+  // they will be expect by the 3rd party 3d Secure service.
+  
+  if ($form_id == 'commerce_checkout_form_3d_secure') {
+    // Change the form action.
+    $form['#action'] = $form['3d_secure']['hidden_action']['#value']; 
+    $form['#attributes']['target'] = 'iframe_3d_secure';
+    
+    // Move the fields to the top level.
+    $form['PaReq'] = $form['3d_secure']['PaReq'];
+    $form['TermUrl'] = $form['3d_secure']['TermUrl'];
+    $form['MD'] = $form['3d_secure']['MD'];
+    $form['submit'] = $form['3d_secure']['submit'];
+    $form['iframe_3d_secure'] = $form['3d_secure']['iframe_3d_secure'];
+    
+    // Remove redundant form elements.
+    unset($form['3d_secure']);
+  }
+}
+
+/**
+ * A temporary page that is displayed until the 3d secure form is submitted.
+ * Since the form is submitted via a javascript call, this page is only really visible
+ * to those that have JS turned off.
+ */
+function commerce_3d_secure_waiting_page() {
+  global $base_url;
+  $img_src = $base_url . '/' . drupal_get_path('module', 'commerce_3d_secure') . '/theme/loader.gif';
+  
+  print '<html><head><title></title></head><body>';
+  print '<div style="text-align: center;">';
+  print '<img src="' . $img_src . '" />';
+  print '<p>' . t('Please wait to be redirected to your card provider for authorisation.') . '</p>';
+  print '</div>';
+  print '</body></html>';
+}
+
+function commerce_3d_secure_clear_iframe($redirect_url) {
+  global $base_url;
+  $img_src = $base_url . '/' . drupal_get_path('module', 'commerce_3d_secure') . '/theme/loader.gif';
+  
+  print '<html><head><title></title></head><body onload="document.forms[0].submit();">';
+  print '<div style="text-align: center;">';
+  print '<img src="' . $img_src . '" />';
+  print '<p>' . t('Please wait while your authentication is being processed. You will be redirected in a few seconds.') . '</p>';
+  print drupal_render(drupal_get_form('commerce_3d_secure_callback_form', $redirect_url));
+  print '</div>';
+  print '</body></html>';
+}
+
+function commerce_3d_secure_callback_form($form, &$form_state, $redirect_url) {
+  $form['#action'] = url($redirect_url);
+  $form['#attributes'] = array(
+    'target' => array('_top'),
+  );
+
+  $form['continue'] = array(
+    '#type' => 'submit',
+    '#value' => t('Please click here to continue.'),
+    '#prefix' => '<noscript>',
+    '#suffix' => '</noscript>',
+  );
+
+  return $form;
+}
+
+/**
+ * Implements hook_commerce_payment_method_info_alter().
+ */
+function commerce_3d_secure_commerce_payment_method_info_alter(&$payment_methods) {
+  // 3-D Secure needs to do things before the payment method callbacks
+  // are called. We store the original callback names and set the new
+  // 3-D Secure versions. The original callbacks will be called from
+  // within the new callbacks.
+  
+  // This hook gets called before payment method default values are set,
+  // so we need to create the default values here.
+  // The 3 values we need to set defaults for:
+  //  - 'callbacks'
+  //  - 'base'
+  //  - default callback names
+  foreach ($payment_methods as $method_id => &$payment_method) {
+    if (!isset($payment_method['callbacks'])) {
+      $payment_method['callbacks'] = array();
+    }
+    
+    foreach (array('submit_form', 'submit_form_validate', 'submit_form_submit') as $callback_name) {
+      // If a non-default callback is defined by a module, use it instead.
+      if ($callback = commerce_payment_method_callback($payment_method, $callback_name)) {
+        $payment_method['callbacks'][$callback_name . '_original'] = $callback;
+      }
+      else {
+        $base = !empty($payment_method['base']) ? $payment_method['base'] : $method_id;
+        $payment_method['callbacks'][$callback_name . '_original'] = $base . '_' . $callback_name;
+      }
+      
+      $payment_method['callbacks'][$callback_name] = 'commerce_3d_secure_commerce_payment_method_' . $callback_name;
+    }
+  }
+}
+
+/**
+ * Implements hook_commerce_payment_transaction_status_info().
+ */
+function commerce_3d_secure_commerce_payment_transaction_status_info() {
+  $statuses = array();
+
+  $statuses[COMMERCE_3D_SECURE_STATUS_3DS] = array(
+    'status' => COMMERCE_3D_SECURE_STATUS_3DS,
+    'title' => t('3-D Secure'),
+    'icon' => drupal_get_path('module', 'commerce_3d_secure') . '/theme/icon-3ds.png',
+    'total' => FALSE,
+  );
+
+  return $statuses;
+}
+
+/**
+ * Implements CALLBACK_commerce_payment_method_settings_form().
+ */
+function commerce_3d_secure_commerce_payment_method_settings_form($settings = NULL) {
+  // Default 3-D Secure settings.
+  $settings += array(
+    'commerce_3d_secure_mpi' => '',
+  );
+
+  // Display a heading to separate the MPI settings from the payment
+  //  method settings.
+  // @TODO: Wrap with a fieldset, but form values therein are not saved.
+  $form['commerce_3d_secure_mpi_info'] = array(
+    '#type' => 'item',
+    '#markup' => '<h3>' . t('3-D Secure Settings') . '</h3>' .
+      t('Select the external 3-D Secure MPI service to invoke when using this payment method.') . '<br/>' .
+      t('Save and re-edit this form to refresh MPI settings.'),
+  );
+  
+  $form['commerce_3d_secure_mpi'] = array(
+    '#type' => 'select',
+    '#title' => t('3-D Secure Provider'),
+    '#default_value' => $settings['commerce_3d_secure_mpi'],
+    '#options' => commerce_3d_secure_mpi_select_list(),
+  );
+
+  // @TODO: Load MPI settings form with AJAX.
+  if (!empty($settings['commerce_3d_secure_mpi'])) {
+    if ($mpi = commerce_3d_secure_mpi_load($settings['commerce_3d_secure_mpi'])) {
+      $mpi_settings_form = module_invoke($mpi['module'], 'commerce_3d_secure_mpi_settings', $settings);
+
+      if (is_array($mpi_settings_form) && count($mpi_settings_form) > 0) {
+        foreach ($mpi_settings_form as $element_id => $element) {
+          $form[$element_id] = $element;
+        }
+      }
+      else {
+        $form['commerce_3d_secure_mpi_no_settings'] = array(
+          '#type' => 'item',
+          '#markup' => t('The selected MPI does not have any settings.'),
+        );
+      }
+    }
+    else {
+      $form['commerce_3d_secure_mpi_unknown_mpi'] = array(
+        '#type' => 'item',
+        '#markup' => t('Error: Invalid MPI.'),
+      );
+    }
+  }
+
+  return $form;
+}
+
+/**
+ * Implements CALLBACK_commerce_payment_method_submit_form().
+ */
+function commerce_3d_secure_commerce_payment_method_submit_form($payment_method, $pane_values, $checkout_pane, $order) {
+  // @TODO: Allow MPI's to add form elements?
+  
+  if ($callback = commerce_payment_method_callback($payment_method, 'submit_form_original')) {
+    $form = $callback($payment_method, $pane_values, $checkout_pane, $order);
+  }
+  else {
+    $form = array();
+  }
+  return $form;
+}
+
+/**
+ * Implements CALLBACK_commerce_payment_method_submit_form().
+ */
+function commerce_3d_secure_commerce_payment_method_submit_form_validate($payment_method, $pane_form, $pane_values, $order, $form_parents = array()) {
+  // @TODO: Allow MPI's to add form validation?
+  
+  if ($callback = commerce_payment_method_callback($payment_method, 'submit_form_validate_original')) {
+    return $callback($payment_method, $pane_form, $pane_values, $order, $form_parents = array());
+  }
+}
+
+/**
+ * Implements CALLBACK_commerce_payment_method_submit_form_submit().
+ */
+function commerce_3d_secure_commerce_payment_method_submit_form_submit($payment_method, $pane_form, $pane_values, $order, $charge) {
+  // Remove any residual 3-D Secure data.
+  unset($_SESSION['3d_secure']);
+  unset($order->data['extra_authorisation']);
+    
+  // Whether to proceed directly to the payment method's submission.
+  $authorize = FALSE;
+
+  // Skip 3-D Secure if no provider is selected.
+  if (empty($payment_method['settings']['commerce_3d_secure_mpi'])) {
+    $authorize = TRUE;
+  }
+  else {
+    $mpi_id = $payment_method['settings']['commerce_3d_secure_mpi'];
+
+    if ($mpi = commerce_3d_secure_mpi_load($mpi_id)) {
+      $lookup_function = $mpi['module'] . '_commerce_3d_secure_mpi_lookup';
+      
+      if (function_exists($lookup_function)) {
+        // Do lookup and process the result.
+        $mpi_result = module_invoke($mpi['module'], 'commerce_3d_secure_mpi_lookup', $payment_method, $pane_values, $order, $charge);
+
+        // Merge in required values
+        $mpi_result += array(
+          'success' => FALSE,
+          'authenticate' => FALSE,
+          'message' => t('MPI lookup did not return a message.'),
+          'enrollment_status' => '',
+          'ECI' => '',
+          'PAReq' => '',
+          'ACSURL' => '',
+          'MD' => '',
+          'txn_id' => '',
+        );
+    
+        
+        commerce_3d_secure_log_transaction($payment_method, $order, $charge, $mpi_result, 'lookup');
+        
+        // Process Lookup result
+        if ($mpi_result['success'] === TRUE) {
+          if ($mpi_result['authenticate'] === TRUE) {
+            global $base_url;
+
+            // Set extra authentication to trigger 3-D Secure step.
+            $order->data['extra_authorisation'] = array(
+              'PAReq' => $mpi_result['PAReq'],
+              'ACSURL' => $mpi_result['ACSURL'],
+              'MD' => $mpi_result['MD'],
+              'TermUrl' => $base_url . '/commerce_3d_secure/term_callback/' . $order->order_number,
+            );
+
+            // Set checkout data for later use by payment method.
+            $checkout_data = array(
+              'payment_method' => $payment_method,
+              'pane_form' => $pane_form,
+              'pane_values' => $pane_values,
+              'order' => $order,
+              'charge' => $charge,
+            );
+            commerce_3d_secure_session_set_value('checkout_data', $checkout_data);
+
+            // Set authentication data for later use by payment method.
+            $authentication_data = array(
+              'enrollment_status' => $mpi_result['enrollment_status'],
+              'ECI' => $mpi_result['ECI'],
+            );
+            commerce_3d_secure_session_set_authentication_data($authentication_data);
+          }
+          else {
+            // Do not authenticate. Proceed with unauthenticated authorization.
+            $authorize = TRUE;
+          }
+        }
+        else {
+          // Log the error. Proceed with an unauthenticated authorization.
+          $authorize = TRUE;
+          watchdog('commerce_3d_secure', 'MPI <em>@mpi_id</em> lookup returned an error response. Message: @message',
+            array('@mpi_id' => $mpi_id, '@message' => $mpi_result['message'])
+          );
+        }
+      }
+      else {
+        // Selected MPI implementation is missing a lookup function.
+        $authorize = TRUE;
+        watchdog('commerce_3d_secure', 'Missing lookup function, @function, for @mpi_title MPI',
+          array('@function' => $lookup_function, '@mpi_title' => $mpi['title'])
+        );
+      }
+    }
+    else {
+      // Selected MPI does not exist.
+      $authorize = TRUE;
+      watchdog('commerce_3d_secure', 'Unable to do 3-D Secure lookup with non-existing MPI, @mpi_id.',
+        array('@mpi_id' => $mpi_id)
+      );
+    }
+  }
+
+  if ($authorize) {
+    $fail = FALSE;
+
+    if ($callback = commerce_payment_method_callback($payment_method, 'submit_form_submit_original')) {
+      $authorize_result = $callback($payment_method, $pane_form, $pane_values, $order, $charge);
+
+      if ($authorize_result === FALSE) {
+        $fail = TRUE;
+      }
+    }
+    else {
+      drupal_set_message(t('The selected payment method cannot process payments.'), 'error');
+      $fail = TRUE;
+    }
+
+    // Remove any residual 3-D Secure data.
+    unset($_SESSION['3d_secure']);
+    unset($order->data['extra_authorisation']);
+
+    // Fail the pane because the payment method has an error.
+    if ($fail) {
+      return FALSE;
+    }
+  }
+  
+  // Proceed to 3-D Secure step in checkout router.
+}
+
+/**
+ * Callback to capture POST data resulting from authentication.
+ */
+function commerce_3d_secure_term_callback($order_number) {
+  // Get checkout data and purge it from the session.
+  $checkout_data = commerce_3d_secure_session_get_value('checkout_data');
+  // @TODO: Also purge session automatically if callback is never reached.
+  
+  $checkout_pages = commerce_checkout_pages();
+  $goto_step = '';
+  
+  $order = commerce_order_load_by_number($order_number);
+  if (!isset($order)) {
+    // Order does not exist anymore.
+    drupal_set_message(t('Your order could not be found.'), 'warning');
+    watchdog('commerce_3d_secure', '3-D Secure TermURL callback was attempted for non-existing order @order_number.',
+      array('@order_number' => $order_number), WATCHDOG_NOTICE
+    );
+    // Go to front page immediately.
+    commerce_3d_secure_clear_iframe('<front>');
+  }
+
+  $do_auth = TRUE;
+  $order_status = commerce_order_status_load($order->status);
+  if ($order_status['name'] != 'checkout_3d_secure') {
+    // Order is not in the 3-D Secure phase anymore.
+    drupal_set_message(t('Your order is not in the 3-D Secure step.'), 'warning');
+    watchdog('commerce_3d_secure', '3-D Secure TermURL callback was attempted for order @order_number which is not in the 3-D Secure state.',
+      array('@order_number' => $order_number), WATCHDOG_NOTICE
+    );
+
+    // Let redirect stay on current step.
+    $do_auth = FALSE;
+  }
+  elseif (!isset($checkout_data['payment_method'])
+      || !isset($checkout_data['pane_form'])
+      || !isset($checkout_data['pane_values'])
+      || !isset($checkout_data['order'])
+      || !isset($checkout_data['charge'])) {
+    // Session incomplete or empty.
+    drupal_set_message(t('Your 3-D Secure session is invalid.'), 'warning');
+    watchdog('commerce_3d_secure', '3-D Secure TermURL callback was attempted for order @order_number with invalid 3-D Secure session.',
+      array('@order_number' => $order_number), WATCHDOG_NOTICE
+    );
+    
+    $goto_step = $checkout_pages['3d_secure']['prev_page'];
+    $do_auth = FALSE;
+  }
+  elseif (!isset($_POST)) {
+    // No response was received.
+    drupal_set_message(t('The authentication server failed to respond. Please wait a few minutes before trying again.'), 'warning');
+    watchdog('commerce_3d_secure', '3-D Secure TermURL callback without POST data was attempted for order @order_number.',
+      array('@order_number' => $order_number), WATCHDOG_NOTICE
+    );
+    
+    $goto_step = $checkout_pages['3d_secure']['prev_page'];
+    $do_auth = FALSE;
+  }
+
+  if ($do_auth) {
+    // Get the checkout step data.
+    $pane_form = $checkout_data['pane_form'];
+    $pane_values = $checkout_data['pane_values'];
+    $order = $checkout_data['order'];
+    $charge = $checkout_data['charge'];
+    $payment_method = commerce_payment_method_instance_load($order->data['payment_method']);
+
+    $mpi_id = $payment_method['settings']['commerce_3d_secure_mpi'];
+    $mpi = commerce_3d_secure_mpi_load($mpi_id);
+
+    $mpi_result = module_invoke($mpi['module'], 'commerce_3d_secure_mpi_authenticate', $_POST, $payment_method, $order);
+
+    // Merge in required values.
+    $mpi_result += array(
+      'authorize' => FALSE,
+      'authenticated' => FALSE,
+      'message' => t('MPI authentication did not return a message.'),
+      'ECI' => '',
+      'authentication_status' => '',
+      'authentication_value' => '',
+      'authentication_txn_id' => '',
+    );
+    
+    // Set authentication data for later use by payment method.
+    $authentication_data = array(
+      'ECI' => $mpi_result['ECI'],
+      'authentication_status' => $mpi_result['authentication_status'],
+      'authentication_value' => $mpi_result['authentication_value'],
+      'authentication_txn_id' => $mpi_result['authentication_txn_id'],
+    );
+    
+    commerce_3d_secure_log_transaction($payment_method, $order, $charge, $mpi_result, 'authenticate');
+    
+    commerce_3d_secure_session_set_authentication_data($authentication_data);
+
+    if ($mpi_result['authorize'] === TRUE) {
+      if ($mpi_result['authenticated'] === TRUE) {
+      }
+      else {
+      }
+  
+      if ($callback = commerce_payment_method_callback($payment_method, 'submit_form_submit_original')) {
+        $payment_method = $checkout_data['payment_method'];
+        
+        // It is now up to the payment method to retrieve the MPI response data
+        // and do something with it.
+        $payment_submit = $callback($payment_method, $pane_form, $pane_values, $order, $charge);
+
+        if ($payment_submit === FALSE) {
+          // Payment method indicates a failure.
+          // Let payment method handle the display of any further errors.
+          $goto_step = $checkout_pages['3d_secure']['prev_page'];
+        }
+        else {
+          $goto_step = $checkout_pages['3d_secure']['next_page'];
+        }
+      }
+      else {
+        drupal_set_message(t('Payment method is incomplete. Please contact the administrator.'), 'error');
+        $goto_step = $checkout_pages['3d_secure']['prev_page'];
+      }
+    }
+    else {
+      // Do not authorize. Go back to the page before 3-D Secure.
+      $goto_step = $checkout_pages['3d_secure']['prev_page'];
+    }
+  }
+
+  // Update order status before moving to a different step.
+  if (!empty($goto_step)) {
+    $order = commerce_order_status_update($order, 'checkout_' . $goto_step, FALSE);
+  }
+  
+  unset($order->data['extra_authorisation']);
+  commerce_order_save($order);
+  
+  $target_uri = commerce_checkout_order_uri($order);
+  commerce_3d_secure_clear_iframe($target_uri);
+}
+
+/**
+ * Fetch all available MPIs
+ *
+ * @return
+ * An associative array containing all available MPI's.
+ */
+function commerce_3d_secure_mpi_list() {
+  $mpis = &drupal_static(__FUNCTION__);
+  
+  if (!isset($mpis)) {
+    $mpis = array();
+    
+    foreach (module_implements('commerce_3d_secure_mpi_info') as $module) {
+      foreach (module_invoke($module, 'commerce_3d_secure_mpi_info') as $mpi_id => $mpi) {
+        $mpi['mpi_id'] = $mpi_id;
+        $mpi['module'] = $module;
+        $mpis[$mpi_id] = $mpi;
+      }
+    }
+  }
+
+  return $mpis;
+}
+
+/**
+ * Load a specific MPI.
+ *
+ * @return
+ * An associative array containing MPI data, or FALSE if it does not exist.
+ */
+function commerce_3d_secure_mpi_load($mpi_id) {
+  $mpis = commerce_3d_secure_mpi_list();
+
+  if (isset($mpis[$mpi_id])) {
+    return $mpis[$mpi_id];
+  }
+  else {
+    return FALSE;
+  }
+}
+
+/**
+ * Return a simplified list of MPI's to be used in a form element.
+ * 
+ * @return
+ *  An associative array mapping MPI identifiers to MPI titles.
+ */
+function commerce_3d_secure_mpi_select_list() {
+  $mpis = commerce_3d_secure_mpi_list();
+  
+  if (count($mpis) == 0) {
+    $options = array('' => t('None available'));
+  }
+  else {
+    $options = array('' => t('Do not use'));
+
+    foreach ($mpis as $mpi) {
+      $options[$mpi['mpi_id']] = $mpi['title'];
+    }
+  }
+
+  return $options;
+}
+
+/**
+ * Update authentication data to be used by payment method.
+ */
+function commerce_3d_secure_session_set_authentication_data($nvp) {
+  $current_data = commerce_3d_secure_session_get_authentication_data();
+
+  // Merge in the current MPI data.
+  $nvp += $current_data;
+  
+  commerce_3d_secure_session_set_value('authentication_data', $nvp);
+}
+
+/**
+ * Get authentication data to be used by payment method.
+ *
+ * Gets the standardized authentication values to be sent to a payment gateway.
+ *
+ * @return
+ *  An associative array containing:
+ *   - enrollment_status: Enrollment Status
+ *   - ECI: Elecetronic Commerce Indicator
+ *   - authentication_status: Authentication Status
+ *   - authentication_value: Authentication (Payload) Value
+ *   - authentication_txn_id: Authentication Transaction Identifier
+ *  May also contain optional MPI-specific name-value pairs.
+ */
+function commerce_3d_secure_session_get_authentication_data() {
+  $authentication_data = commerce_3d_secure_session_get_value('authentication_data');
+
+  if (is_null($authentication_data)) {
+    $authentication_data = array();
+  }
+  
+  // Merge in standardized keys. It is up to the MPI implementation to set
+  // these, but it is preferred if the payment method's 3-D Secure
+  // implementation uses only these values (when applicable) to ensure a common
+  // interface between MPI providers.
+  $authentication_data += array(
+    'enrollment_status' => '',
+    'ECI' => '',
+    'authentication_status' => '',
+    'authentication_value' => '',
+    'authentication_txn_id' => '',
+  );
+
+  return $authentication_data;
+}
+
+/**
+ * Serialize and, if available, encrypt session data.
+ *
+ * @param $name
+ *  The key of the value to be set.
+ *
+ * @param $value
+ *  The value to be set.
+ */
+function commerce_3d_secure_session_set_value($name, $value) {
+  $value = serialize($value);
+
+  if (module_exists('encrypt')) {
+    $options = array(
+      'base64' => TRUE,
+    );
+    $value = encrypt($value, $options);
+  }
+  elseif (module_exists('aes')) {
+    $value = aes_encrypt($value);
+  }
+  
+  $_SESSION['3d_secure'][$name] = $value;
+}
+
+/**
+ * Unserialize and, if available, decrypt session data.
+ * 
+ * After calling this function the data will be removed from the session.
+ *
+ * @param $name
+ *  The key of the value to get.
+ *
+ * @return
+ *  The requested value, or NULL if not found.
+ */
+function commerce_3d_secure_session_get_value($name) {
+  if (isset($_SESSION['3d_secure'][$name])) {
+    $value = $_SESSION['3d_secure'][$name];
+
+    if (module_exists('encrypt')) {
+      $options = array(
+        'base64' => TRUE,
+      );
+      $value = decrypt($value, $options);
+    }
+    elseif (module_exists('aes')) {
+      $value = aes_decrypt($value);
+    }
+
+    $value = unserialize($value);
+  }
+  else {
+    $value = NULL;
+  }
+
+  // Remove data from the session once it is retrieved.
+  unset($_SESSION['3d_secure'][$name]);
+
+  return $value;
+}
+
+/**
+ * Log a 3-D Secure transaction.
+ *
+ * @param $payment_method
+ *  The payment method value extracted from an order.
+ * @param $order
+ *  The actual order object.
+ * @param $charge
+ *  The amount and currency used in this transaction.
+ * @param $mpi_result
+ *  The result from the MPI.
+ * @param $response_type
+ *  Whether $mpi_result represents a lookup or an authentication message.
+ */
+function commerce_3d_secure_log_transaction($payment_method, $order, $charge, $mpi_result, $response_type) {
+  $transaction = commerce_payment_transaction_new($payment_method['method_id'], $order->order_id);
+  $transaction->instance_id = $payment_method['instance_id'];
+  $transaction->amount = $charge['amount'];
+  $transaction->currency_code = $charge['currency_code'];
+  $transaction->payload[REQUEST_TIME] = $mpi_result;
+
+  $message = array();
+  
+  if ($response_type == 'lookup') {
+    $transaction->remote_id = $mpi_result['txn_id'];
+    $transaction->remote_status = $mpi_result['enrollment_status'];
+    $message[] = '<strong>' . t('3-D Secure lookup') . '</strong>';
+    $message[] = t('ECI:') . ' ' . $mpi_result['ECI'];
+    $message[] = t('Message:') . ' ' . $mpi_result['message'];
+  }
+  elseif ($response_type == 'authenticate') {
+    $transaction->remote_id = $mpi_result['authentication_txn_id'];
+    $transaction->remote_status = $mpi_result['authentication_status'];
+    $message[] = '<strong>' . t('3-D Secure authentication') . '</strong>';
+    $message[] = t('ECI:') . ' ' . $mpi_result['ECI'];
+    $message[] = t('Message:') . ' ' . $mpi_result['message'];
+  }
+  else {
+    $transaction->remote_id = t('n/a');
+    $transaction->remote_status = t('n/a');
+    $message[] = '<strong>' . t('Unknown 3-D Secure response') . '</strong>';
+    $message[] = t('ECI:') . ' ' . $mpi_result['ECI'];
+    $message[] = t('Message:') . ' ' . $mpi_result['message'];
+  }
+
+  $transaction->status = COMMERCE_3D_SECURE_STATUS_3DS;
+  $transaction->message = implode('<br />', $message);
+
+  // Save the transaction information.
+  commerce_payment_transaction_save($transaction);
+}
+
+/**
+ * Gets a list of 3-D Secure programs.
+ */
+function commerce_3d_secure_programs() {
+  global $base_url;
+  $base = $base_url . '/' . drupal_get_path('module', 'commerce_3d_secure');
+  $programs = array(
+    'vbv' => array(
+      'title' => 'Verified by Visa',
+      'image_url' => $base . '/programs/images/vbv_learn_more.gif',
+      'text_url' => $base . '/programs/vbv_learn_more.htm',
+    ),
+    'mcs' => array(
+      'title' => 'MasterCard SecureCode',
+      'image_url' => $base . '/programs/images/mcsc_learn_more.gif',
+      'text_url' => $base . '/programs/mcs_learn_more.htm',
+    ),
+  );
+
+  return $programs;
+}

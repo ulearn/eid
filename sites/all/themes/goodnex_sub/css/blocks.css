@@ -1,0 +1,56 @@
+/* ------------------------------------------------------
+  Blocks - Mainly referring to BlockTheme / BlockClass Classes
+------------------------------------------------------ */
+
+/*Padding*/
+.myblock{
+padding-top: 12px;
+}
+
+/*USER BLOCK */
+.userblock{
+
+}
+
+/*Language Switcher Block*/
+
+/*Webform - SideBar Question Form*/
+.myform {
+background: #595959; 
+-moz-border-radius: 5px; 
+-webkit-border-radius: 5px; 
+border-radius: 5px; 
+padding: 15px 28px; 
+position: relative; 
+color: #ebebeb;
+font-family: 'Dakota';
+}
+
+.myform .block-title{
+float: left;
+color: #ebebeb;
+font-family: 'Dakota';
+}
+
+.widget-title {
+color: #ebebeb;
+}
+
+.video-title {
+color: #6f6f6f;
+}
+#sidebar.widget-title {
+color: #ebebeb;
+}
+
+/*END Webform - SideBar Question Form */
+
+/* My Cart LINK BLOCK */
+#block-ulearn-commerce-ulearn-cart {
+  float: right;
+}
+
+#block-ulearn-commerce-ulearn-cart a {
+  color: #fff;
+  font-weight: bold;
+}

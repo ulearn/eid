@@ -1,0 +1,32 @@
+<?php
+
+/**
+ * @file
+ * Install, update and uninstall functions for the Media: WIstia module.
+ */
+
+/**
+ * Implement hook_install().
+ */
+function media_wistia_install() {
+  return array();
+}
+
+/**
+ * Implement hook_uninstall().
+ */
+function media_wistia_uninstall() {
+  drupal_load('module', 'media_wistia');
+
+  foreach (media_wistia_variable_default() as $variable => $value) {
+    media_wistia_variable_del($variable);
+  }
+
+  // deleting the administration
+  variable_del('media_wistia_api_key');
+  variable_del('media_wistia_api_url');
+  variable_del('media_wistia_oembed_url');
+  variable_del('media_wistia_getembed_url');
+
+  return array(array('success' => TRUE, 'query' => "Deleted all variables in the Media: Wistia namespace."));
+}

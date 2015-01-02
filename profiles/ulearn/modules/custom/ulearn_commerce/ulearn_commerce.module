@@ -1,0 +1,900 @@
+<?php
+/**
+ * @file
+ * Code for the ULearn Commerce feature.
+ */
+
+include_once 'ulearn_commerce.features.inc';
+
+/**
+ * Implements hook_menu().
+ */
+function ulearn_commerce_menu() {
+  $items = array();
+  $items['admin/config/ulearn/variables/ulearn_commerce'] = array(
+    'title' => 'Ulearn Commerce variables',
+    'description' => 'Ulearn Commerce variable.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('variable_group_form', 'ulearn_commerce'),
+    'access arguments' => array('administer ulearn'),
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function ulearn_commerce_menu_alter(&$items) {
+  $items['checkout/%commerce_order/%commerce_checkout_page']['title callback'] = 'ulearn_commerce_checkout_page_title';
+  $items['checkout/%commerce_order/%commerce_checkout_page']['title arguments'] = array(1, 2);
+  unset($items['checkout/%commerce_order/%commerce_checkout_page']['title']);
+}
+
+/**
+ * Implements hook_views_api().
+ */
+function ulearn_commerce_views_api() {
+  return array(
+    'api' => 3,
+  );
+}
+
+/**
+ * Implements hook_theme().
+ */
+function ulearn_commerce_theme($existing, $type, $theme, $path) {
+  return array(
+    'ulearn_commerce_credit_card_marks' => array(),
+  );
+}
+
+/**
+ * Implements hook_commerce_checkout_page_info_alter().
+ */
+function ulearn_commerce_commerce_checkout_page_info_alter(&$checkout_pages) {
+  unset($checkout_pages['shipping']);
+}
+
+/**
+ * Title callback for checkout page.
+ */
+function ulearn_commerce_checkout_page_title($order, $checkout_page = NULL) {
+  if ($checkout_page['page_id'] == 'complete') {
+    $title = variable_get('ulearn_commerce_checkout_completion_title', '');
+    if (!empty($title)) {
+      $title = check_plain(token_replace($title, array('commerce-order' => $order), array('clear' => TRUE)));
+      drupal_set_title($title);
+    }
+    unset($_SESSION['ulearn_course_selected_week']);
+    unset($_SESSION['ulearn_course_selected_week_option']);
+  }
+}
+
+/**
+ * Implements hook_field_default_field_instances_alter().
+ */
+function ulearn_commerce_field_default_field_instances_alter(&$instances) {
+  // Alter the default field instances right
+  // before they are cached into the database.
+  if (!empty($instances['commerce_option-week_options-field_course_week_options'])) {
+    $instance = &$instances['commerce_option-week_options-field_course_week_options'];
+    $options_settings = $instance['settings']['commerce_pricing_attributes'];
+    $courses_config = variable_get('ulearn_courses', array());
+    $week_number = !empty($courses_config['ulearn_course_weeks']) ? $courses_config['ulearn_course_weeks'] : 10;
+    // Prepare week options array as required.
+    $options = array();
+    for ($i = 1; $i <= $week_number; $i++) {
+      // Use defaults for old options.
+      $options[$i] = array(
+        'enabled' => isset($options_settings[$i]['enabled']) ? $options_settings[$i]['enabled'] : TRUE,
+        'price_op' => isset($options_settings[$i]['price_op']) ? $options_settings[$i]['price_op'] : 'plus',
+        'price' => isset($options_settings[$i]['price']) ? $options_settings[$i]['price'] : '0',
+        'currency_code' => isset($options_settings[$i]['currency_code']) ? $options_settings[$i]['currency_code'] : commerce_default_currency(),
+        'calculate' => isset($options_settings[$i]['calculate']) ? $options_settings[$i]['calculate'] : 'per_item',
+        'weight' => $i,
+      );
+    }
+    // Use empty option if available.
+    if (isset($options_settings['_none'])) {
+      $options['_none'] = $options_settings['_none'];
+    }
+    $instance['settings']['commerce_pricing_attributes'] = $options;
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function ulearn_commerce_cron() {
+  // Load all pending orders.
+  $orders = commerce_order_load_multiple(array(), array('status' => 'pending'));
+  foreach ($orders as $order) {
+    // Get payment method instance.
+    $payment_method = commerce_payment_method_instance_load($order->data['payment_method']);
+    // If payment method is Pay To Study, check for payment status.
+    if ($payment_method['base'] == 'commerce_paytostudy') {
+      ulearn_commerce_order_change_status($order, $payment_method);
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function ulearn_commerce_form_ulearn_settings_admin_settings_form_alter(&$form, &$form_state) {
+  $form['ulearn_commerce']['ulearn_commerce_checkout_login'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Immediate login settings'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+  );
+  $form['ulearn_commerce']['ulearn_commerce_checkout_login']['ulearn_commerce_enable_checkout_login'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Log in user immediately after checkout.'),
+    '#default_value' => variable_get('ulearn_commerce_enable_checkout_login', TRUE),
+  );
+  $form['ulearn_commerce']['ulearn_commerce_checkout_login']['ulearn_commerce_redirect_user'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Redirect user to edit account page after login.'),
+    '#default_value' => variable_get('ulearn_commerce_redirect_user', TRUE),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="ulearn_commerce_enable_checkout_login"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+}
+
+/**
+ * Implements hook_commerce_registration_information_checkout_form_alter().
+ */
+function ulearn_commerce_commerce_registration_information_checkout_form_alter(&$pane_form, &$form_state) {
+  $first = TRUE;
+  foreach ($pane_form as $key => &$container) {
+    if ($key == 'register_entities' || $key == 'no_reg_products') {
+      continue;
+    }
+    foreach ($container as $child_key => &$registration_set) {
+      // Display first registration set only and remove other.
+      if ($first) {
+        $registration_set['#access'] = TRUE;
+        $first = FALSE;
+      }
+      else {
+        $registration_set['#access'] = FALSE;
+      }
+    }
+  }
+}
+
+
+/**
+ * Implements hook_commerce_checkout_router().
+ */
+function ulearn_commerce_checkout_router($order, $checkout_page) {
+  if ($checkout_page['page_id'] == 'checkout' && !empty($order->data['register_entities'])) {
+    $register_entities = $order->data['register_entities'];
+    $first = TRUE;
+    foreach ($register_entities as $prod_key => $register_entity) {
+      // Do not update first registration entity.
+      if ($first) {
+        $first = FALSE;
+        $registration = $register_entity[0];
+        continue;
+      }
+      else {
+        // Update incomplete registration entities
+        // with proper data from first registration.
+        // First registration object which has all the data.
+        $registration_data = $registration;
+        // Other registration object which needs some data from first one.
+        $current_registration = $register_entity[0];
+        // Retain the registration id of current object.
+        $registration_data->registration_id = $current_registration->registration_id;
+        $registration_data->entity_id = $current_registration->entity_id;
+        // Do not change Enrollment dates and unique id fields.
+        $registration_data->field_registrant_enrollment_date = $current_registration->field_registrant_enrollment_date;
+        $registration_data->field_registration_unique_id = $current_registration->field_registration_unique_id;
+        registration_save($registration_data);
+        $order->data['register_entities'][$prod_key][0] = $registration_data;
+      }
+    }
+    commerce_order_save($order);
+  }
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function ulearn_commerce_block_info() {
+  $blocks = array();
+
+  $blocks['ulearn_cart'] = array(
+    'info' => t('ULearn - Shopping cart'),
+    'cache' => DRUPAL_NO_CACHE,
+    'status' => 1,
+    'region' => 'header_top_right',
+    'visibility' => BLOCK_VISIBILITY_NOTLISTED,
+    'theme' => 'goodnex_sub',
+    'weight' => -50,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function ulearn_commerce_block_view($delta) {
+  global $user;
+
+  $content = '';
+  if ($delta == 'ulearn_cart') {
+
+    // First check to ensure there are products in the shopping cart.
+    if ($order = commerce_cart_order_load($user->uid)) {
+      $wrapper = entity_metadata_wrapper('commerce_order', $order);
+
+      // If there are one or more products in the cart...
+      if (commerce_line_items_quantity($wrapper->commerce_line_items, commerce_product_line_item_types()) > 0) {
+        $content = '<div class="ulearn-my-cart-link">' . l(t('My Cart'), 'cart') . '</div>';
+      }
+    }
+
+    return array('subject' => NULL, 'content' => $content);
+  }
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function ulearn_commerce_form_alter(&$form, &$form_state, $form_id) {
+  if ($form_id == 'commerce_checkout_form_checkout') {
+
+    // Set default values for billing profile.
+    $order = $form_state['order'];
+    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+    $has_registration = FALSE;
+    $profile_exists = isset($order->commerce_customer_billing[LANGUAGE_NONE][0]['profile_id']);
+    foreach ($order_wrapper->commerce_line_items as $line_item_wrapper) {
+      if (isset($line_item_wrapper->commerce_product) && in_array($line_item_wrapper->commerce_product->type->value(), array('course', 'special_course'))) {
+        $has_registration = TRUE;
+        break;        
+      }
+    }
+    if ($has_registration && !$profile_exists) {
+      // Course is added into order. Populate registration data
+      // so we can use it as default values for billing profile.
+      $query = new EntityFieldQuery;
+      $result = $query
+        ->entityCondition('entity_type', 'registration')
+        ->propertyCondition('order_id', $order->order_id)
+        ->propertyCondition('entity_type', 'commerce_product')
+        ->execute();
+      if (!empty($result['registration'])) {
+        $registrations = registration_load_multiple(array_keys($result['registration']));
+        // Get first registration
+        $registration = reset($registrations);
+        // Set default values.
+        // Email address.
+        if (!empty($registration->anon_mail)) {
+          $form['account']['login']['mail']['#default_value'] = $registration->anon_mail;
+        }
+        // Phone number
+        if (!empty($registration->field_user_phone[LANGUAGE_NONE][0]['value'])) {
+          $form['customer_profile_billing']['field_user_phone'][LANGUAGE_NONE][0]['value']['#default_value'] = $registration->field_user_phone[LANGUAGE_NONE][0]['value'];
+        }
+        // Set default addressfield.
+        // Get the addressfield element we're modifying.
+        // Adapted from addressfield.module/addressfield_field_widget_form()
+        $element =& $form['customer_profile_billing']['commerce_customer_address'][LANGUAGE_NONE][0];
+        $element_key = $element['element_key']['#value'];
+        $field = $form_state['field']['#parents']['customer_profile_billing']['#fields']['commerce_customer_address'][LANGUAGE_NONE]['field'];
+        $instance = $form_state['field']['#parents']['customer_profile_billing']['#fields']['commerce_customer_address'][LANGUAGE_NONE]['instance'];
+        $delta = $element['#delta'];
+        $settings = $instance['widget']['settings'];
+        $langcode = $element['#language'];
+        $items = array($delta => $element['#address']);
+
+        // Set the default country here, based on values in registration.
+        $address = $registration->field_registrant_address[LANGUAGE_NONE][0];
+
+        // After setting the value above, merge the default values
+        // to provide a value for every expected array key.
+        $countries = _addressfield_country_options_list($field, $instance);
+        $address += addressfield_default_values($countries);
+
+
+        // Add the form elements for the standard widget, which includes a country
+        // select list at the top that reloads the available address elements when the
+        // country is changed.
+        if ($instance['widget']['type'] == 'addressfield_standard') {
+          // Generate the address form.
+          $context = array(
+            'mode' => 'form',
+            'field' => $field,
+            'instance' => $instance,
+            'langcode' => $langcode,
+            'delta' => $delta,
+          );
+          $element = array_merge($element, addressfield_generate($address, $settings['format_handlers'], $context));
+
+          // Mark the form element as required if necessary.
+          $element['#required'] = $delta == 0 && $instance['required'];
+        }
+        $form['customer_profile_billing']['commerce_customer_address'][LANGUAGE_NONE][0]['name_block']['first_name']['#default_value'] = $registration->field_registrant_first_name[LANGUAGE_NONE][0]['safe_value'];
+        $form['customer_profile_billing']['commerce_customer_address'][LANGUAGE_NONE][0]['name_block']['last_name']['#default_value'] = $registration->field_registrant_last_name[LANGUAGE_NONE][0]['safe_value'];
+
+        // Always uncheck the terms and conditions.
+        $form['customer_profile_billing']['field_terms_and_conditins'][LANGUAGE_NONE]['#default_value'] = array(1 => 0);
+      }
+    }
+    // Remove empty option.
+    unset($form['customer_profile_billing']['field_foreign_exchange_limit'][LANGUAGE_NONE]['#options']['_none']);
+    $form['customer_profile_billing']['field_foreign_exchange_limit'][LANGUAGE_NONE]['#default_value'] = 0;
+    $form['customer_profile_billing']['field_foreign_exchange_limit'][LANGUAGE_NONE]['#states'] = array(
+      'visible' => array(
+        ':input[name="customer_profile_billing[commerce_customer_address][und][0][country]"]' => array(
+          'value' => 'IN',
+        )
+      ),
+      'required' => array(
+        ':input[name="customer_profile_billing[commerce_customer_address][und][0][country]"]' => array(
+          'value' => 'IN',
+        )
+      ),
+    );
+  }
+
+  if (strpos($form_id, 'views_form_commerce_cart_form_') !== FALSE) {
+    // Do not allow to update quantity of course product.
+    foreach ($form['edit_quantity'] as $key => $element) {
+      if (!empty($form['edit_quantity'][$key]['#line_item_id'])) {
+        $line_item_id = $form['edit_quantity'][$key]['#line_item_id'];
+        $line_item = commerce_line_item_load($line_item_id);
+        $line_item_wrapper = entity_metadata_wrapper('commerce_line_item', $line_item);
+        if (isset($line_item_wrapper->commerce_product) && in_array($line_item_wrapper->commerce_product->type->value(), ulearn_commerce_product_types())) {
+          $form['edit_quantity'][$key]['#disabled'] = TRUE;
+        }
+      }
+    }
+    // Add continue shopping link.
+    $form['#suffix'] = '<div class="ulearn-commerce-continue-shopping">' . l(t('Continue shopping'), '<front>') . '</div>';
+  }
+
+  if ($form_id == 'commerce_checkout_form_review') {
+    $options_values = array(
+      'commerce_paytostudy|commerce_payment_ulearn_pay_to_study_test',
+      'commerce_paytostudy|commerce_payment_commerce_paytostudy',
+    );
+    foreach ($options_values as $value) {
+      if (isset($form['commerce_payment']['payment_method']['#options'][$value])) {
+        $form['commerce_payment']['payment_method']['#options'][$value] = t('PaytoStudy (International payment option)');
+      }
+    }
+
+    $options_values = array(
+      'commerce_realex_remote|commerce_payment_credit_card',
+      'commerce_realex_remote|commerce_payment_commerce_realex_remote',
+    );
+    foreach ($options_values as $value) {
+      if (isset($form['commerce_payment']['payment_method']['#options'][$value])) {
+        $form['commerce_payment']['payment_method']['#options'][$value] = t('Credit card');
+      }
+    }
+
+    $options_values = array(
+      'bank_transfer|commerce_payment_ulearn_bank_transfer',
+    );
+    foreach ($options_values as $value) {
+      if (isset($form['commerce_payment']['payment_method']['#options'][$value])) {
+        $form['commerce_payment']['payment_method']['#options'][$value] = t('Pay Cash / Credit Card In Reception');
+      }
+    }
+
+    $order = $form_state['order'];
+    $order_wrapper = entity_metadata_wrapper('commerce_order', $order);
+    commerce_fees_commerce_cart_order_refresh($order_wrapper);
+
+    // Display association marks and SSL text on credit card.
+    list($payment_method, $method_instance) = explode('|', $form['commerce_payment']['payment_method']['#default_value']);
+    if ($payment_method == 'commerce_realex_remote') {
+
+      $form['commerce_payment']['payment_details']['credit_card']['association_marks'] = array(
+        '#type' => 'item',
+        '#markup' => theme('ulearn_commerce_credit_card_marks'),
+        '#weight' => -50,
+      );
+      $form['commerce_payment']['payment_details']['credit_card']['ssl_info'] = array(
+        '#type' => 'item',
+        '#markup' => variable_get('ulearn_commerce_ssl_info_text', 'Credit card details are transferred using SSL.'),
+        '#prefix' => '<div class="ulearn-ssl-info">',
+        '#suffix' => '</div>',
+      );
+    }
+  }
+
+  if ($form_id == 'commerce_checkout_form_complete') {
+    // Embed script to display map for Pay Cash / Credit Card In Reception payment method.
+    $order = $form_state['order'];
+    list($method_id, $payment_method) = explode('|', $order->data['payment_method']);
+    if (($method_id == 'bank_transfer') && (variable_get('ulearn_commerce_pay_reception_embed_map_display', TRUE))) {
+      $form['checkout_completion_message']['message']['#markup'] .= '<div class="ulern-commerce-pay-cash-reception-map">' . variable_get('ulearn_commerce_pay_reception_embed_map_script', '') . '</div>';
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function ulearn_commerce_form_commerce_checkout_form_alter(&$form, &$form_state, $form_id) {
+  if (!empty($form['commerce_payment']['payment_details']['amount'])) {
+
+    $payment_method = !empty($form_state['values']['commerce_payment']['payment_method']) ? $form_state['values']['commerce_payment']['payment_method'] : $form['commerce_payment']['payment_method']['#default_value'];
+
+    $allowed = in_array($payment_method, ulearn_commerce_payment_methods());
+
+    $balance = commerce_payment_order_balance($form_state['order']);
+
+    $default = $allowed ? variable_get('ulearn_commerce_pay_later_amount', 50) : commerce_currency_amount_to_decimal($balance['amount'], $balance['currency_code']);
+
+    $form['commerce_payment']['payment_details']['amount']['#default_value'] = $default;
+    $form_state['values']['commerce_payment']['payment_details']['amount']  = $default;
+
+    $form['commerce_payment']['payment_details']['amount']['#disabled'] = TRUE;
+
+    if ($allowed) {
+      $form['commerce_payment']['payment_details']['amount']['#description'] = t('Pay !amount !code now.', array('!amount' => $default, '!code' => $balance['currency_code']));
+    }
+
+    $form['commerce_payment']['payment_details']['amount']['#access'] = $allowed;
+  }
+
+  // If this checkout form contains the payment method radios.
+  if (!empty($form['commerce_payment']['payment_method']['#options'])) {
+    // Default payment method from form.
+    $default_payment_method = $form['commerce_payment']['payment_method']['#default_value'];
+    // Selected payment method by user (Will be used on AJAX call).
+    $selected_payment = !empty($form_state['input']['commerce_payment']['payment_method']) ? $form_state['input']['commerce_payment']['payment_method'] : $default_payment_method;
+
+    list($method_id, $rule_name) = explode('|', $selected_payment);
+
+    // If we find Commerce Pay to Study, request paytostudy to convert the amount.
+    if ($method_id == 'commerce_paytostudy') {
+      $order = $form_state['order'];
+      $settings = $form['commerce_payment']['payment_methods']['#value'][$selected_payment]['settings'];
+
+      // Request paytostudy to convert amount into local currency.
+      $response = ulearn_commerce_order_paytostudy_convert_amount($order, $settings);
+
+      $instructions = '';
+      if ($response['status']) {
+        $converted_amount = $response['converted_amount'];
+        $converted_currency  = $response['converted_currency'];
+        $instructions = '<strong>' . t('Today\'s (!today) Exchange Rate', array('!today' => format_date(time(), 'custom', 'd/m/Y'))) . ': ' . '1 ' . $response['converted_currency'] . ' = ' . $response['fxrate'] . ' ' . $response['source_currency'] . '</strong>.<br />';
+
+        // Add tax info.
+        if ($response['has_tax']) {
+          $instructions .= '<strong>' . $response['tax_name'] . ': ' . $response['tax_amount'] . $converted_currency . '</strong> ' . '('. $response['tax_description'] . '). <br />';
+        }
+
+        $instructions .= '<strong>' . t('Total amount in your local currency is !amount !currency_code.', array('!amount' => $converted_amount, '!currency_code' => $converted_currency)) . '</strong>';
+      }
+      else {
+        $instructions = $response['message'];
+      }
+
+      if (!empty($form['commerce_payment']['payment_details']['instruction'])) {
+        $form['commerce_payment']['payment_details']['instruction']['#markup'] .= '<div class="clearfix">' . $instructions . '</div>';
+      }
+    }
+  }
+  // Change markup for 3D Secure iframe.
+  if (!empty($form['3d_secure']['iframe_3d_secure'])) {
+    $form['3d_secure']['iframe_3d_secure']['#markup'] = '<iframe width="410" height="410" scrolling="no" frameborder="0" name ="iframe_3d_secure" id ="iframe_3d_secure" src="' . 
+      url('commerce_3d_secure/3d_secure_waiting_page')
+      . '"></iframe>';
+  }
+  if (!empty($form['iframe_3d_secure'])) {
+    $form['iframe_3d_secure']['#markup'] = '<iframe width="410" height="410" scrolling="no" frameborder="0" name ="iframe_3d_secure" id ="iframe_3d_secure" src="' . 
+      url('commerce_3d_secure/3d_secure_waiting_page')
+      . '"></iframe>';
+  }
+}
+
+/**
+ * Implements hook_variables_settings_form_alter().
+ */
+function ulearn_commerce_variable_settings_form_alter(&$form, &$form_state, $form_id) {
+  foreach (commerce_payment_method_options_list() as $method => $method_title) {
+    if (!empty($form['ulearn_commerce_payment_instructions_' . $method]) && $form['ulearn_commerce_payment_instructions_' . $method]['#variable']['module'] == 'ulearn_commerce') {
+      // Add tokens here.
+      $var_info = array(
+        'site' => array(
+          'type' => 'site',
+          'label' => t('Site information'),
+          'description' => t('Site-wide settings and other global information.'),
+        ),
+        'commerce_order' => array(
+          'label' => t('Order'),
+          'type' => 'commerce_order',
+        ),
+      );
+      $form['ulearn_commerce_help'] = RulesTokenEvaluator::help($var_info);
+    }
+  }
+  if (!empty($form['ulearn_commerce_order_created_mail_[mail_part]']) || !empty($form['ulearn_commerce_order_admin_mail_[mail_part]'])) {
+    // Add tokens here.
+    $var_info = array(
+      'site' => array(
+        'type' => 'site',
+        'label' => t('Site information'),
+        'description' => t('Site-wide settings and other global information.'),
+      ),
+      'commerce_order' => array(
+        'label' => t('Order'),
+        'type' => 'commerce_order',
+      ),
+    );
+    $form['ulearn_commerce_help'] = RulesTokenEvaluator::help($var_info);
+  }
+}
+
+/**
+ * Implements hook_enable()
+ */
+function ulearn_commerce_enable() {
+  // Make sure the rules created by commerce have been taken into account
+  drupal_flush_all_caches();
+  // Deactivate default commerce rules.
+  $rules = array(
+    'commerce_checkout_new_account', 'commerce_checkout_order_email',
+  );
+  foreach ($rules as $rule_name) {
+    if ($rules_config = rules_config_load($rule_name)) {
+      $rules_config->active = FALSE;
+      $rules_config->save();
+    }
+  }
+}
+
+/**
+ * Implements hook_disable()
+ */
+function ulearn_commerce_disable() {
+  // Activate default commerce rules..
+  $rules = array(
+    'commerce_checkout_new_account', 'commerce_checkout_order_email',
+  );
+  foreach ($rules as $rule_name) {
+    if ($rules_config = rules_config_load($rule_name)) {
+      $rules_config->active = TRUE;
+      $rules_config->save();
+    }
+  }
+}
+
+/**
+ * Implements hook_commerce_customer_profile_presave().
+ */
+function ulearn_commerce_commerce_customer_profile_presave($profile) {
+  if ($profile->type == 'billing') {
+    // Save Foreign exchange limit field only if country is India.
+    $profile_wrapper = entity_metadata_wrapper('commerce_customer_profile', $profile);
+    $address = $profile_wrapper->commerce_customer_address->value();
+    if ($address['country'] != 'IN') {
+      $profile_wrapper->field_foreign_exchange_limit->set(NULL);
+    }
+  }
+}
+
+/**
+ * Theme implementation: ulearn_commerce_credit_card_marks.
+ */
+function theme_ulearn_commerce_credit_card_marks($vars) {
+  $image_directory = drupal_get_path('module', 'ulearn_commerce') . '/images/cards/';
+  $marks = ulearn_commerce_credit_cards_marks();
+  $output = '';
+  if (!empty($marks)) {
+    $output .= '<div class="ulearn-credit-card_marks">';
+    foreach ($marks as $card_type => $mark_img) {
+      $path = $image_directory . $mark_img;
+      $output .= '<span class="' . drupal_html_class('mark-image-' . $card_type) . '">';
+      $output .= theme('image', array('path' => $path));
+      $output .= '</span>';
+    }
+    $output .= '</div>';
+  }
+  return $output;
+}
+
+/**
+ * API
+ */
+
+/**
+ * Get available commerce product types.
+ */
+function ulearn_commerce_available_product_types() {
+  $product_types = array();
+  foreach (commerce_product_types() as $key => $type) {
+    $product_types[$key] = $type['name'];
+  }
+  return $product_types;
+}
+
+/**
+ * Get configured commerce product types.
+ */
+function ulearn_commerce_product_types() {
+  $types = array();
+  $product_types = variable_get('ulearn_commerce_product_types', array());
+  foreach ($product_types as $key => $value) {
+    if (!empty($value)) {
+      $types[] = $value;
+    }
+  }
+  return $types;
+}
+
+/**
+ * Get configured commerce payment methods for partial payments.
+ */
+function ulearn_commerce_payment_methods() {
+  $methods = array();
+  $payment_methods = variable_get('ulearn_commerce_pay_later_methods', array());
+  foreach ($payment_methods as $key => $value) {
+    if (!empty($value)) {
+      $methods[] = $value;
+    }
+  }
+  return $methods;
+}
+
+/**
+ * Get message variables of paymant method.
+ */
+function ulearn_commerce_payment_transaction_message_variables($payment_method, $order = NULL) {
+  $conditions = array(
+    'payment_method' => $payment_method,
+  );
+  if (!empty($order->order_id)) {
+    $conditions['order_id'] = $order->order_id;
+  }
+  $transactions =  commerce_payment_transaction_load_multiple(array(), $conditions);
+  $transaction = reset($transactions);
+  return !empty($transaction->message_variables) ? $transaction->message_variables : array();
+}
+
+/**
+ * Get payment method options.
+ */
+function ulearn_commerce_payment_method_options($format = 'options') {
+  $payment_methods = commerce_payment_methods();
+  if ($format == 'options') {
+    $options = array();
+    foreach ($payment_methods as $method_id => $payment_method) {
+      $options[$method_id] = $payment_method['title'];
+    }
+    return $options;
+  }
+  return $payment_methods;
+}
+
+/**
+ * Get message variables token help.
+ */
+function ulearn_commerce_payment_transaction_message_variables_help($payment_method) {
+  $help = array(
+    'commerce_paytostudy' => array(
+      '@operation_type',
+      '@operation_transactionid',
+      '@operation_result',
+      '@operation_date',
+      '@operation_timegmt',
+      '@transfer_transactionid',
+      '@transfer_type',
+      '@transfer_particular',
+      '@transfer_currencyabbr',
+      '@transfer_fxrate',
+      '@transfer_currency',
+      '@transfer_amount',
+      '@transfer_amountrounded',
+      '@transfer_accountname',
+      '@transfer_accountnumber',
+      '@transfer_bankname',
+      '@transfer_bankaddress',
+      '@transfer_referencenumber',
+      '@transfer_taxes_tax_name',
+      '@transfer_taxes_tax_amount',
+      '@transfer_taxes_tax_percentage',
+    ),
+  );
+  return isset($help[$payment_method]) ? $help[$payment_method] : array();
+}
+
+/**
+ * Get transaction statuses for PaytoStudy payment method.
+ */
+function ulearn_commerce_paytostudy_transaction_statuses() {
+  return array(
+    'Registered' => t('Registered'),
+    'Pending' => t('Pending'),
+    'Paid' => t('Paid'),
+  );
+}
+
+/**
+ * Requests payment history for paytostudy and change order status if needed.
+ */
+function ulearn_commerce_order_change_status($order, $payment_method) {
+  $payment_status = ulearn_commerce_order_paytostudy_transaction_status($order, $payment_method);
+  if ($payment_status == variable_get('ulearn_commerce_paytostudy_transaction_status', 'Pending')) {
+    // Change order status to completed.
+    $order->status = 'completed';
+    commerce_order_save($order);
+  }
+}
+
+/**
+ * Check paytostudy transaction status of an order.
+ */
+function ulearn_commerce_order_paytostudy_transaction_status($order, $payment_method) {
+  // Send the request.
+  $type = 'transaction-history';
+  module_load_include('inc', 'commerce_paytostudy', 'commerce_paytostudy');
+  $request = array(
+    'paytostudy_post_request_url' => $payment_method['settings']['paytostudy_post_request_url'],
+    'password_loginto' => $payment_method['settings']['password_loginto'],
+    'username_loginto' => $payment_method['settings']['username_loginto'],
+    'paymentDetails_adi_id' => $order->created . $order->order_number
+  );
+  $post_data = _commerce_paytostudy_build_post_request($request, $type);
+  $response = _commerce_paytostudy_send_request($payment_method['settings']['paytostudy_post_request_url'], $post_data);
+  return isset($response['payments_payment_status']) ? $response['payments_payment_status'] : FALSE;
+}
+
+/**
+ * Request Paytostudy to convert amount to local currency.
+ */
+function ulearn_commerce_order_paytostudy_convert_amount($order, $settings) {
+  module_load_include('inc', 'commerce_paytostudy', 'commerce_paytostudy');
+
+  $profile = commerce_customer_profile_load($order->commerce_customer_shipping[LANGUAGE_NONE][0]['profile_id']);
+  $address = $profile->commerce_customer_address[LANGUAGE_NONE][0];
+
+  $balance = commerce_payment_order_balance($order);
+
+  // Build request data.
+  $request = array(
+    'paytostudy_post_request_url' => $settings['paytostudy_post_request_url'],
+    'password_loginto' => $settings['password_loginto'],
+    'username_loginto' => $settings['username_loginto'],
+    'bank_account_id' => $settings['bank_account_id'],
+    'convertOnly' => 1, // We don't want any transaction right now. Just convert the amount to local currency.
+    'country_pay_from' => isset($address['country']) ? $address['country'] : '',
+    'payment_amount' => commerce_currency_amount_to_decimal($balance['amount'], $balance['currency_code']),
+  );
+
+  $post_data = _commerce_paytostudy_build_post_request($request, 'make-payment');
+  $response = _commerce_paytostudy_send_request($settings['paytostudy_post_request_url'], $post_data);
+
+  $response_data = array();
+  $response_data['status'] = (isset($response['operation_result']) && $response['operation_result'] == 'ok');
+  if ($response_data['status']) {
+    $response_data['source_amount'] = $response['rate_sourceamount'];
+    $response_data['source_currency'] = $response['rate_sourcecurrency'];
+    $response_data['converted_amount'] = $response['rate_convertedamount'];
+    $response_data['converted_currency'] = $response['rate_convertedcurrency'];
+    $response_data['fxrate'] = $response['rate_fxrate'];
+    $response_data['has_tax'] = FALSE;
+    if (isset($response['rate_taxes_tax_amount'])) {
+      $response_data['has_tax'] = TRUE;
+      $response_data['tax_amount'] = $response['rate_taxes_tax_amount'];
+      $response_data['tax_name'] = isset($response['rate_taxes_tax_name']) ? $response['rate_taxes_tax_name'] : '';
+      $response_data['tax_description'] = isset($response['rate_taxes_tax_description']) ? $response['rate_taxes_tax_description'] : '';
+    }
+  }
+  else {
+    watchdog('ulearn_commerce_paytostudy', '<pre>' . print_r($response, TRUE) . '</pre>');
+    $replace_text = !empty($response['operation_errormessage']) ? $response['operation_errormessage'] : '';
+    $replace = array('!paytostudy-error' => $replace_text);
+    $value = array(
+      'value' => t('We are unable to process currency conversion. Reason provided by PaytoStudy: !paytostudy-error. Please select different payment method.', $replace),
+      'format' => 'full_html',
+    );
+    $paytostudy_not_avail = variable_get('ulearn_commerce_paytostudy_not_avail', $value);
+    $paytostudy_not_avail['value'] = str_replace('!paytostudy-error', $replace_text, $paytostudy_not_avail['value']);
+    $response_data['message'] = check_markup($paytostudy_not_avail['value'], $paytostudy_not_avail['format']);
+  }
+  return $response_data;
+}
+
+
+/**
+ * Replace PaytoStudy payment instructions.
+ */
+function ulearn_commerce_paytostudy_payment_instructions($order, $message_variables) {
+  // Remove parameters that are not required.
+  $remove_params = array('@operation_type', '@operation_result', '@operation_date', '@operation_timegmt', '@operation_transactionid');
+  foreach ($remove_params as $param) {
+    unset($message_variables[$param]);
+  }
+  // Map parameter and labels.
+  $mappings = array(
+    '@transfer_transactionid' => t('Transaction ID'),
+    '@transfer_type' => t('Transaction type'),
+    '@transfer_particular' => t('Student Name'),
+    '@transfer_currencyabbr' => t('Bank Account Currency'),
+    '@transfer_currency' => t('Bank Account Currency'),
+    '@transfer_fxrate' => t('Foreign-exchange Rate'),
+    '@transfer_referencenumber' => t('Transaction Reference Number'),
+    '@transfer_amount' => t('Amount'),
+    '@transfer_amountrounded' => t('Amount (rounded)'),
+    '@transfer_bankname' => t('Bank Name'),
+    '@transfer_bankbranchname' => t('Bank Branch Name'),
+    '@transfer_bankaddress' => t('Bank address'),
+    '@transfer_bankbranchcode' => t('Bank Code / Branch Code'),
+    '@transfer_banknotes' => t('Additional Bank Details'),
+    '@transfer_accountname' => t('Bank Account Name'),
+    '@transfer_accountnumber' => t('Bank Account Number'),
+    '@transfer_sortcode' => t('Sort Code'),
+    '@transfer_iban' => t('IBAN Number'),
+    '@transfer_swift' => t('SWIFT Number'),
+    '@transfer_aba' => t('Fedwire / Routing Number / ABA Number'),
+    '@transfer_rtgs' => t('RTGS Number'),
+    '@transfer_ifsc' => t('IFSC'),
+    '@transfer_transitfifcode' => t('Transit / FIF (Branch) Code'),
+    '@transfer_bsb' => t('BSB'),
+    '@transfer_bic' => t('BIC'),
+    '@transfer_companyaddress' => t('Company Address'),
+    '@transfer_taxes_tax_name' => t('Tax Name'),
+    '@transfer_taxes_tax_amount' => t('Tax Amount'),
+    '@transfer_taxes_tax_percentage' => t('Tax Percentage'),
+    '@transfer_taxes_tax_description' => t('Additional tax information'),
+  );
+
+  $rows = array();
+  foreach ($message_variables as $token => $value) {
+    $row = array();
+    $row[] = array('data' => $mappings[$token], 'style' => 'width:272px;padding:2px');
+    $row[] = array('data' => $value, 'style' => 'width:300px;padding:2px');
+    $rows[] = $row;
+  }
+
+  $output = theme('table', array('rows' => $rows, 'attributes' => array('align' => 'center', 'border' => '1', 'cellspacing' => '1', 'cellpadding' => '1')));
+
+  return $output;
+}
+
+/**
+ * Credit cards enabled and image mappings.
+ */
+function ulearn_commerce_credit_cards_marks() {
+  $marks = array(
+    'visa' => 'visa.png',
+    'mastercard' => 'mastercard.png',
+    'amex' => 'amex.png',
+    'switch' => '',
+    'solo' => 'solo.png',
+    'maestro' => 'maestro.png',
+    'delta' => '',
+    'dc' => 'diners.png',
+    'laser' => 'laser.png',
+  );
+  // Get enabled payments from rules config.
+  $rule = rules_config_load('commerce_payment_commerce_realex_remote');
+  $card_type_marks = array();
+  foreach($rule->actions() as $action) {
+    if ($action->getElementName() == 'commerce_payment_enable_commerce_realex_remote') {
+      $settings = $action->settings;
+      foreach ($settings['payment_method']['settings']['card_types'] as $card_type => $value) {
+        if (!empty($value) && !empty($marks[$card_type])) {
+          $card_type_marks[$card_type] = $marks[$card_type];
+        }
+      }
+      break;
+    }
+  }
+  return $card_type_marks;
+}

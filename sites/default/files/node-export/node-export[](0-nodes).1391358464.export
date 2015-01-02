@@ -1,0 +1,542 @@
+array(
+  (object) array(
+      'vid' => '50',
+      'uid' => '1',
+      'title' => 'slideshow 1 ',
+      'log' => '',
+      'status' => '1',
+      'comment' => '1',
+      'promote' => '1',
+      'sticky' => '0',
+      'vuuid' => '48442909-8563-43f8-b25b-3d2b51c893ee',
+      'nid' => '50',
+      'type' => 'article',
+      'language' => 'en',
+      'created' => '1377502509',
+      'changed' => '1390589574',
+      'tnid' => '0',
+      'translate' => '0',
+      'uuid' => '4e7457bc-b4fa-4465-a659-dea7633125e5',
+      'revision_timestamp' => '1390589574',
+      'revision_uid' => '1',
+      'body' => array(
+        'und' => array(
+          array(
+            'value' => "\t                       <!-- captions -->\r\n\t                        <div class=\"tp-caption big text-shadow pl0 sft\" data-x=\"0\" data-y=\"267\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\r\n\t                                Welcome to <strong>ULearn</strong>\r\n\t                        </div>\r\n\t                        \r\n\t                        <div class=\"tp-caption small white sft\"  data-x=\"0\" data-y=\"305\" data-speed=\"1000\" data-start=\"1500\" data-easing=\"easeOutBack\">\r\n\t                                English School Dublin\r\n\t                        </div>\r\n\t                        \r\n\t                        <div class=\"tp-caption small colored sfb\" data-x=\"0\" data-y=\"340\" data-speed=\"1000\" data-start=\"2000\" data-easing=\"easeOutExpo\">\r\n\t                                Dublin's Boutique Language School\r\n\t                        </div>",
+            'summary' => '',
+            'format' => 'full_html',
+            'safe_value' => "<!-- captions --><div class=\"tp-caption big text-shadow pl0 sft\" data-x=\"0\" data-y=\"267\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\n\t                                Welcome to <strong>ULearn</strong>\n\t                        </div>\n<div class=\"tp-caption small white sft\" data-x=\"0\" data-y=\"305\" data-speed=\"1000\" data-start=\"1500\" data-easing=\"easeOutBack\">\n\t                                English School Dublin\n\t                        </div>\n<div class=\"tp-caption small colored sfb\" data-x=\"0\" data-y=\"340\" data-speed=\"1000\" data-start=\"2000\" data-easing=\"easeOutExpo\">\n\t                                Dublin's Boutique Language School\n\t                        </div>\n",
+            'safe_summary' => '',
+          ),
+        ),
+      ),
+      'field_tags' => array(),
+      'field_image' => array(
+        'und' => array(
+          array(
+            'fid' => '268',
+            'alt' => '',
+            'title' => '',
+            'width' => '775',
+            'height' => '285',
+            'uid' => '1',
+            'filename' => 'camilla.png',
+            'uri' => 'public://field/image/camilla.png',
+            'filemime' => 'image/png',
+            'filesize' => '348217',
+            'status' => '1',
+            'timestamp' => '1390589574',
+            'uuid' => 'a97f83c2-1028-4d33-b42a-a7bbb3d2ccda',
+            'rdf_mapping' => array(),
+          ),
+        ),
+      ),
+      'field_image_large' => array(),
+      'field_image_medium' => array(),
+      'field_video_link' => array(),
+      'field_before_title' => array(),
+      'field_widget_image' => array(),
+      'rdf_mapping' => array(
+        'field_image' => array(
+          'predicates' => array(
+            'og:image',
+            'rdfs:seeAlso',
+          ),
+          'type' => 'rel',
+        ),
+        'field_tags' => array(
+          'predicates' => array(
+            'dc:subject',
+          ),
+          'type' => 'rel',
+        ),
+        'rdftype' => array(
+          'sioc:Item',
+          'foaf:Document',
+        ),
+        'title' => array(
+          'predicates' => array(
+            'dc:title',
+          ),
+        ),
+        'created' => array(
+          'predicates' => array(
+            'dc:date',
+            'dc:created',
+          ),
+          'datatype' => 'xsd:dateTime',
+          'callback' => 'date_iso8601',
+        ),
+        'changed' => array(
+          'predicates' => array(
+            'dc:modified',
+          ),
+          'datatype' => 'xsd:dateTime',
+          'callback' => 'date_iso8601',
+        ),
+        'body' => array(
+          'predicates' => array(
+            'content:encoded',
+          ),
+        ),
+        'uid' => array(
+          'predicates' => array(
+            'sioc:has_creator',
+          ),
+          'type' => 'rel',
+        ),
+        'name' => array(
+          'predicates' => array(
+            'foaf:name',
+          ),
+        ),
+        'comment_count' => array(
+          'predicates' => array(
+            'sioc:num_replies',
+          ),
+          'datatype' => 'xsd:integer',
+        ),
+        'last_activity' => array(
+          'predicates' => array(
+            'sioc:last_activity_date',
+          ),
+          'datatype' => 'xsd:dateTime',
+          'callback' => 'date_iso8601',
+        ),
+      ),
+      'translations' => (object) array(
+          'original' => NULL,
+          'data' => array(
+            'da' => array(
+              'entity_type' => 'node',
+              'entity_id' => '50',
+              'language' => 'da',
+              'source' => 'en',
+              'uid' => '1',
+              'status' => '1',
+              'translate' => '0',
+              'created' => '1377668995',
+              'changed' => '1377668995',
+            ),
+            'fr' => array(
+              'entity_type' => 'node',
+              'entity_id' => '50',
+              'language' => 'fr',
+              'source' => 'en',
+              'uid' => '1',
+              'status' => '1',
+              'translate' => '0',
+              'created' => '1377670094',
+              'changed' => '1377670094',
+            ),
+            'tr' => array(
+              'entity_type' => 'node',
+              'entity_id' => '50',
+              'language' => 'tr',
+              'source' => 'en',
+              'uid' => '1',
+              'status' => '1',
+              'translate' => '0',
+              'created' => '1377670200',
+              'changed' => '1377670200',
+            ),
+          ),
+        ),
+      'cid' => '0',
+      'last_comment_timestamp' => '1377670200',
+      'last_comment_name' => NULL,
+      'last_comment_uid' => '1',
+      'comment_count' => '0',
+      'name' => 'admin_sat',
+      'picture' => '0',
+      'data' => 'b:0;',
+      'path' => array(
+        'pid' => '63',
+        'source' => 'node/50',
+        'alias' => 'content/slideshow-1-da',
+        'language' => 'da',
+      ),
+      'menu' => NULL,
+      'node_export_drupal_version' => '7',
+    ),
+  (object) array(
+      'vid' => '51',
+      'uid' => '1',
+      'title' => 'slideshow 2',
+      'log' => '',
+      'status' => '1',
+      'comment' => '1',
+      'promote' => '1',
+      'sticky' => '0',
+      'vuuid' => '220d47ad-9b04-4c87-bd95-07942894a63b',
+      'nid' => '51',
+      'type' => 'article',
+      'language' => 'en',
+      'created' => '1377502813',
+      'changed' => '1390586205',
+      'tnid' => '0',
+      'translate' => '0',
+      'uuid' => '277756b3-6c96-45fc-86b4-6cc987d32175',
+      'revision_timestamp' => '1390586205',
+      'revision_uid' => '1',
+      'body' => array(
+        'und' => array(
+          array(
+            'value' => "<!-- captions -->\r\n\r\n\r\n  <div class=\"tp-caption video sfr\" data-x=\"10\" data-y=\"220\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\r\n<iframe src=\"//player.vimeo.com/video/81809506?color=c9ff23\" width=\"500\" height=\"281\" frameborder=\"5\" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe>\r\n     </div>\r\n\t                        <div class=\"tp-caption big text-shadow pl0 sfr\" data-x=\"620\" data-y=\"267\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\r\n\t                                ULearn English School Dublin \r\n\t                        </div>\r\n\t                        \r\n\t                        <div class=\"tp-caption small white sfl\" data-x=\"620\" data-y=\"315\" data-speed=\"1000\" data-start=\"1500\" data-easing=\"easeOutBack\">\r\n\t                                Start Learning With ULearn Today \r\n\t                        </div>\r\n\t                          <div class=\"tp-caption sfb\" data-x=\"620\" data-y=\"355\" data-speed=\"1000\" data-start=\"2000\" data-easing=\"easeOutExpo\">\r\n\t                                <a href=\"#\" class=\"button round\">Course Info...</a>\r\n\t                        </div>\r\n\r\n",
+            'summary' => '',
+            'format' => 'full_html',
+            'safe_value' => "<!-- captions --><div class=\"tp-caption video sfr\" data-x=\"10\" data-y=\"220\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\n<iframe src=\"//player.vimeo.com/video/81809506?color=c9ff23\" width=\"500\" height=\"281\" frameborder=\"5\" webkitallowfullscreen=\"\" mozallowfullscreen=\"\" allowfullscreen=\"\"></iframe></div>\n<div class=\"tp-caption big text-shadow pl0 sfr\" data-x=\"620\" data-y=\"267\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\n\t                                ULearn English School Dublin\n\t                        </div>\n<div class=\"tp-caption small white sfl\" data-x=\"620\" data-y=\"315\" data-speed=\"1000\" data-start=\"1500\" data-easing=\"easeOutBack\">\n\t                                Start Learning With ULearn Today\n\t                        </div>\n<div class=\"tp-caption sfb\" data-x=\"620\" data-y=\"355\" data-speed=\"1000\" data-start=\"2000\" data-easing=\"easeOutExpo\">\n\t                                <a href=\"#\" class=\"button round\">Course Info...</a>\n\t                        </div>\n",
+            'safe_summary' => '',
+          ),
+        ),
+      ),
+      'field_tags' => array(),
+      'field_image' => array(
+        'und' => array(
+          array(
+            'fid' => '263',
+            'alt' => '',
+            'title' => '',
+            'width' => '775',
+            'height' => '285',
+            'uid' => '1',
+            'filename' => 'sign.png',
+            'uri' => 'public://field/image/sign.png',
+            'filemime' => 'image/png',
+            'filesize' => '253165',
+            'status' => '1',
+            'timestamp' => '1390583268',
+            'uuid' => '61288e82-81ee-4033-9556-cdd80655fd2b',
+            'rdf_mapping' => array(),
+          ),
+        ),
+      ),
+      'field_image_large' => array(),
+      'field_image_medium' => array(),
+      'field_video_link' => array(),
+      'field_before_title' => array(),
+      'field_widget_image' => array(),
+      'rdf_mapping' => array(
+        'field_image' => array(
+          'predicates' => array(
+            'og:image',
+            'rdfs:seeAlso',
+          ),
+          'type' => 'rel',
+        ),
+        'field_tags' => array(
+          'predicates' => array(
+            'dc:subject',
+          ),
+          'type' => 'rel',
+        ),
+        'rdftype' => array(
+          'sioc:Item',
+          'foaf:Document',
+        ),
+        'title' => array(
+          'predicates' => array(
+            'dc:title',
+          ),
+        ),
+        'created' => array(
+          'predicates' => array(
+            'dc:date',
+            'dc:created',
+          ),
+          'datatype' => 'xsd:dateTime',
+          'callback' => 'date_iso8601',
+        ),
+        'changed' => array(
+          'predicates' => array(
+            'dc:modified',
+          ),
+          'datatype' => 'xsd:dateTime',
+          'callback' => 'date_iso8601',
+        ),
+        'body' => array(
+          'predicates' => array(
+            'content:encoded',
+          ),
+        ),
+        'uid' => array(
+          'predicates' => array(
+            'sioc:has_creator',
+          ),
+          'type' => 'rel',
+        ),
+        'name' => array(
+          'predicates' => array(
+            'foaf:name',
+          ),
+        ),
+        'comment_count' => array(
+          'predicates' => array(
+            'sioc:num_replies',
+          ),
+          'datatype' => 'xsd:integer',
+        ),
+        'last_activity' => array(
+          'predicates' => array(
+            'sioc:last_activity_date',
+          ),
+          'datatype' => 'xsd:dateTime',
+          'callback' => 'date_iso8601',
+        ),
+      ),
+      'translations' => (object) array(
+          'original' => NULL,
+          'data' => array(
+            'da' => array(
+              'entity_type' => 'node',
+              'entity_id' => '51',
+              'language' => 'da',
+              'source' => 'en',
+              'uid' => '1',
+              'status' => '1',
+              'translate' => '0',
+              'created' => '1377670393',
+              'changed' => '1377670393',
+            ),
+            'fr' => array(
+              'entity_type' => 'node',
+              'entity_id' => '51',
+              'language' => 'fr',
+              'source' => 'en',
+              'uid' => '1',
+              'status' => '1',
+              'translate' => '0',
+              'created' => '1377670587',
+              'changed' => '1377670587',
+            ),
+            'tr' => array(
+              'entity_type' => 'node',
+              'entity_id' => '51',
+              'language' => 'tr',
+              'source' => 'en',
+              'uid' => '1',
+              'status' => '1',
+              'translate' => '0',
+              'created' => '1377670705',
+              'changed' => '1377670705',
+            ),
+          ),
+        ),
+      'cid' => '0',
+      'last_comment_timestamp' => '1377670705',
+      'last_comment_name' => NULL,
+      'last_comment_uid' => '1',
+      'comment_count' => '0',
+      'name' => 'admin_sat',
+      'picture' => '0',
+      'data' => 'b:0;',
+      'path' => array(
+        'pid' => '64',
+        'source' => 'node/51',
+        'alias' => 'content/slideshow-2-da',
+        'language' => 'da',
+      ),
+      'menu' => NULL,
+      'node_export_drupal_version' => '7',
+    ),
+  (object) array(
+      'vid' => '52',
+      'uid' => '1',
+      'title' => 'slideshow 3',
+      'log' => '',
+      'status' => '1',
+      'comment' => '1',
+      'promote' => '1',
+      'sticky' => '0',
+      'vuuid' => '55969c3c-2b0e-4a71-8e7f-eeeb60e0d854',
+      'nid' => '52',
+      'type' => 'article',
+      'language' => 'en',
+      'created' => '1377502871',
+      'changed' => '1390585801',
+      'tnid' => '0',
+      'translate' => '0',
+      'uuid' => '589a58ec-1e5a-4e0b-b8e0-7007ebe752b6',
+      'revision_timestamp' => '1390585801',
+      'revision_uid' => '1',
+      'body' => array(
+        'und' => array(
+          array(
+            'value' => "    <!-- captions -->\r\n\r\n\t                        <div class=\"tp-caption big text-shadow pl0 sfl\" data-x=\"0\" data-y=\"267\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\r\n\t                            \tStudents Like You \r\n\t                        </div>\r\n\t                        \r\n\t                        <div class=\"tp-caption small white sfr\" data-x=\"0\" data-y=\"310\" data-speed=\"1000\" data-start=\"1500\" data-easing=\"easeOutBack\">\r\n\t                                From Over 70 Countries Worldwide\r\n\t                        </div>\r\n\t                        \r\n\t                        <div class=\"tp-caption sfb\" data-x=\"0\" data-y=\"355\" data-speed=\"1000\" data-start=\"2000\" data-easing=\"easeOutExpo\">\r\n\t                                <a href=\"#\" class=\"button round\">Learn More...</a>\r\n\t                        </div>\r\n\r\n\t                        <div class=\"tp-caption video sfr\" data-x=\"620\" data-y=\"220\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\r\n<iframe src=\"//player.vimeo.com/video/84313820\" width=\"500\" height=\"281\" frameborder=\"0\" webkitallowfullscreen mozallowfullscreen allowfullscreen></iframe> \r\n\r\n\r\n\t                        </div>",
+            'summary' => '',
+            'format' => 'full_html',
+            'safe_value' => "<!-- captions --><div class=\"tp-caption big text-shadow pl0 sfl\" data-x=\"0\" data-y=\"267\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\n\t                            \tStudents Like You\n\t                        </div>\n<div class=\"tp-caption small white sfr\" data-x=\"0\" data-y=\"310\" data-speed=\"1000\" data-start=\"1500\" data-easing=\"easeOutBack\">\n\t                                From Over 70 Countries Worldwide\n\t                        </div>\n<div class=\"tp-caption sfb\" data-x=\"0\" data-y=\"355\" data-speed=\"1000\" data-start=\"2000\" data-easing=\"easeOutExpo\">\n\t                                <a href=\"#\" class=\"button round\">Learn More...</a>\n\t                        </div>\n<div class=\"tp-caption video sfr\" data-x=\"620\" data-y=\"220\" data-speed=\"1000\" data-start=\"1000\" data-easing=\"easeOutBack\">\n<iframe src=\"//player.vimeo.com/video/84313820\" width=\"500\" height=\"281\" frameborder=\"0\" webkitallowfullscreen=\"\" mozallowfullscreen=\"\" allowfullscreen=\"\"></iframe></div>\n",
+            'safe_summary' => '',
+          ),
+        ),
+      ),
+      'field_tags' => array(),
+      'field_image' => array(
+        'und' => array(
+          array(
+            'fid' => '265',
+            'alt' => '',
+            'title' => '',
+            'width' => '775',
+            'height' => '285',
+            'uid' => '1',
+            'filename' => 'bench.png',
+            'uri' => 'public://field/image/bench_0.png',
+            'filemime' => 'image/png',
+            'filesize' => '220734',
+            'status' => '1',
+            'timestamp' => '1390584686',
+            'uuid' => '24dc9b2e-2120-4e48-9601-d3be130af2ae',
+            'rdf_mapping' => array(),
+          ),
+        ),
+      ),
+      'field_image_large' => array(),
+      'field_image_medium' => array(),
+      'field_video_link' => array(),
+      'field_before_title' => array(),
+      'field_widget_image' => array(),
+      'rdf_mapping' => array(
+        'field_image' => array(
+          'predicates' => array(
+            'og:image',
+            'rdfs:seeAlso',
+          ),
+          'type' => 'rel',
+        ),
+        'field_tags' => array(
+          'predicates' => array(
+            'dc:subject',
+          ),
+          'type' => 'rel',
+        ),
+        'rdftype' => array(
+          'sioc:Item',
+          'foaf:Document',
+        ),
+        'title' => array(
+          'predicates' => array(
+            'dc:title',
+          ),
+        ),
+        'created' => array(
+          'predicates' => array(
+            'dc:date',
+            'dc:created',
+          ),
+          'datatype' => 'xsd:dateTime',
+          'callback' => 'date_iso8601',
+        ),
+        'changed' => array(
+          'predicates' => array(
+            'dc:modified',
+          ),
+          'datatype' => 'xsd:dateTime',
+          'callback' => 'date_iso8601',
+        ),
+        'body' => array(
+          'predicates' => array(
+            'content:encoded',
+          ),
+        ),
+        'uid' => array(
+          'predicates' => array(
+            'sioc:has_creator',
+          ),
+          'type' => 'rel',
+        ),
+        'name' => array(
+          'predicates' => array(
+            'foaf:name',
+          ),
+        ),
+        'comment_count' => array(
+          'predicates' => array(
+            'sioc:num_replies',
+          ),
+          'datatype' => 'xsd:integer',
+        ),
+        'last_activity' => array(
+          'predicates' => array(
+            'sioc:last_activity_date',
+          ),
+          'datatype' => 'xsd:dateTime',
+          'callback' => 'date_iso8601',
+        ),
+      ),
+      'translations' => (object) array(
+          'original' => NULL,
+          'data' => array(
+            'da' => array(
+              'entity_type' => 'node',
+              'entity_id' => '52',
+              'language' => 'da',
+              'source' => 'en',
+              'uid' => '1',
+              'status' => '1',
+              'translate' => '0',
+              'created' => '1377670814',
+              'changed' => '1377670814',
+            ),
+            'fr' => array(
+              'entity_type' => 'node',
+              'entity_id' => '52',
+              'language' => 'fr',
+              'source' => 'en',
+              'uid' => '1',
+              'status' => '1',
+              'translate' => '0',
+              'created' => '1377670919',
+              'changed' => '1377670919',
+            ),
+            'tr' => array(
+              'entity_type' => 'node',
+              'entity_id' => '52',
+              'language' => 'tr',
+              'source' => 'en',
+              'uid' => '1',
+              'status' => '1',
+              'translate' => '0',
+              'created' => '1377671049',
+              'changed' => '1377671049',
+            ),
+          ),
+        ),
+      'cid' => '0',
+      'last_comment_timestamp' => '1377671049',
+      'last_comment_name' => NULL,
+      'last_comment_uid' => '1',
+      'comment_count' => '0',
+      'name' => 'admin_sat',
+      'picture' => '0',
+      'data' => 'b:0;',
+      'path' => array(
+        'pid' => '65',
+        'source' => 'node/52',
+        'alias' => 'content/slideshow-3-da',
+        'language' => 'da',
+      ),
+      'menu' => NULL,
+      'node_export_drupal_version' => '7',
+    ),
+)

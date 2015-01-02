@@ -1,0 +1,103 @@
+<?php
+
+/**
+ * @file
+ * Install / uninstall functions for ULearn Commerce module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function ulearn_commerce_install() {
+  $t = get_t();
+  // Create option set as commerce option sets are not yet exportable.
+  $existing_set = commerce_option_set_load('week_options');
+  if (!$existing_set) {
+    $option_set = new CommerceOptionSet();
+    $option_set->is_new = TRUE;
+    $option_set->set_id = 'week_options';
+    $option_set->name = $t('Week options');
+    commerce_option_set_save($option_set);
+  }
+
+  // Create Fee type as it is not yet exportable.
+  $existing_fee = commerce_fees_load('registration_fee');
+  if (!$existing_fee) {
+    $fee = commerce_fees_new();
+    $fee['name'] = 'registration_fee';
+    $fee['title'] = $t('Registration fee');
+    $fee['display_title'] = $t('Registration fee');
+    commerce_fees_save($fee);
+  }
+}
+
+/**
+ * Create fee type for registration.
+ */
+function ulearn_commerce_update_7001(&$sandbox) {
+  $t = get_t();
+  // Create Fee type as it is not yet exportable.
+  $existing_fee = commerce_fees_load('registration_fee');
+  if (!$existing_fee) {
+    $fee = commerce_fees_new();
+    $fee['name'] = 'registration_fee';
+    $fee['title'] = $t('Registration fee');
+    commerce_fees_save($fee);
+  }
+}
+
+/**
+ * We don't need separate price field now as only one currency (EUR) is enabled.
+ * Remove all instances of dedicated price field from all product types.
+ */
+function ulearn_commerce_update_7002(&$sandbox) {
+  $field_name = 'commerce_price_eur';
+  foreach (commerce_product_types() as $type => $product_type) {
+    $field_instance = field_info_instance('commerce_product', $field_name, $type);
+    if (!empty($field_instance)) {
+      field_delete_instance($field_instance);
+      drupal_set_message(t('Field %field_name is deleted from %product_type.', array('%field_name' => $field_name, '%product_type' => $product_type['name'])));
+    }
+  }
+}
+
+/**
+ * Enable and configure Commerce Checkout Progress module.
+ */
+function ulearn_commerce_update_7003(&$sandbox) {
+  module_enable(array('commerce_checkout_progress'));
+
+  $pages = array('cart', 'registration', 'checkout', 'review', 'payment', 'complete');
+  variable_set('commerce_checkout_progress_block_pages', $pages);
+  variable_set('commerce_checkout_progress_list_type', 'ol');
+  variable_set('commerce_checkout_progress_link', FALSE);
+  variable_set('commerce_checkout_progress_cart', FALSE);
+}
+
+/**
+ * Enable and configure Commerce partial payments module.
+ */
+function ulearn_commerce_update_7004(&$sandbox) {
+  module_enable(array('commerce_partial_payment'));
+  drupal_flush_all_caches();
+  $rules_config = rules_config_load('commerce_partial_payment_order_status_update');
+  $rules_config->active = 0;
+  $rules_config->save();
+}
+
+/**
+ * Enable and configure Commerce Shipping module.
+ */
+function ulearn_commerce_update_7005(&$sandbox) {
+  module_enable(array('commerce_shipping', 'commerce_shipping_ui'));
+  variable_set('commerce_customer_profile_shipping_profile_copy', TRUE);
+  variable_set('commerce_customer_profile_shipping_profile_copy_source', 'billing');
+  variable_set('commerce_customer_profile_shipping_profile_copy_default', TRUE);
+}
+
+/**
+ * Update variable to render Commerce steps as link.
+ */
+function ulearn_commerce_update_7006(&$sandbox) {
+  variable_set('commerce_checkout_progress_link', TRUE);
+}

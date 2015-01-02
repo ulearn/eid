@@ -1,0 +1,46 @@
+<?php
+/**
+ * @file
+ * Code for the Ulearn Accommodation feature.
+ */
+
+include_once 'ulearn_accommodation.features.inc';
+
+/**
+ * Implements hook_block_info().
+ */
+function ulearn_accommodation_block_info() {
+  $default_theme = variable_get('theme_default', 'goodnex_sub');
+  $blocks['accommodation_link'] = array(
+    'info' => t('ULearn Accommodation: Link'),
+    'cache' => DRUPAL_NO_CACHE,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function ulearn_accommodation_block_view($delta = '') {
+  $block = array();
+  if ($delta == 'accommodation_link') {
+    // We don't need any title for this block.
+    $block['subject'] = NULL;
+    $block['content'] = l(t('Check for accommodation'), 'accommodation');
+  }
+  return $block;
+}
+
+/**
+ * Implements hook_form_alter
+ *
+ */
+function ulearn_accommodation_form_alter(&$form, $form_state, $form_id) {
+  $pos = strlen(strstr($form_id, 'commerce_cart_add_to_cart_'));
+  if ($pos > 0) {
+    if (!empty($form['line_item_fields']['field_accommodation_dates']) && $form['line_item_fields']['field_accommodation_dates']['#access'] == TRUE) {
+      // If there exists accommodation date field, that means its an accomodation product display node.
+      $form['quantity']['#title'] = 'Number of Weeks';
+    }
+  }
+}

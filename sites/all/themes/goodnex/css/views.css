@@ -1,0 +1,318 @@
+/* VIEWS ISOTOPE  */
+/*VIDEO - ISOTOPE FILTER CLASSES (ADDED By inserting the field output into the class*/
+.selected.button.medium.gray{
+
+}
+
+#filter.button.medium.\.about-ulearn{
+background-color: #79be0b;
+padding: 8px 20px;
+font-size: 13px;
+color: white;
+-webkit-transition: all 0.2s linear 0s;
+-moz-transition: all 0.2s linear 0s;
+-ms-transition: all 0.2s linear 0s;
+-o-transition: all 0.2s linear 0s;
+transition: all 0.2s linear 0s;
+-moz-border-radius: 15px;
+border-radius: 15px;
+}
+.About-ULearn{
+background-color: #79be0b;
+padding: 8px 20px;
+font-size: 13px;
+color: white;
+-webkit-transition: all 0.2s linear 0s;
+-moz-transition: all 0.2s linear 0s;
+-ms-transition: all 0.2s linear 0s;
+-o-transition: all 0.2s linear 0s;
+transition: all 0.2s linear 0s;
+-moz-border-radius: 15px;
+border-radius: 15px;
+}
+
+.Learning{
+background-color: #22bbd6;
+padding: 8px 20px;
+font-size: 13px;
+color: white;
+-webkit-transition: all 0.2s linear 0s;
+-moz-transition: all 0.2s linear 0s;
+-ms-transition: all 0.2s linear 0s;
+-o-transition: all 0.2s linear 0s;
+transition: all 0.2s linear 0s;
+-moz-border-radius: 15px;
+border-radius: 15px;
+}
+.Testimonials{
+background-color: #795cb0;
+padding: 8px 20px;
+font-size: 13px;
+color: white;
+-webkit-transition: all 0.2s linear 0s;
+-moz-transition: all 0.2s linear 0s;
+-ms-transition: all 0.2s linear 0s;
+-o-transition: all 0.2s linear 0s;
+transition: all 0.2s linear 0s;
+-moz-border-radius: 15px;
+border-radius: 15px;
+}
+
+.About-ULearn:hover { background-color: #373737; }
+.Learning:hover { background-color: #373737; }
+.Testimonials:hover { background-color: #373737; }
+
+/* STYLING THE ACTUAL CONTENT OF THE VIEW  */
+.field-content.vid-thumb{
+padding-left: 10px;
+}
+
+.vid-thumb{
+position: relative;
+padding-left: 10px;
+}
+#isotope-container {
+   margin: 0 auto !important;
+}
+.isotope-element img {
+margin: 10px auto;
+text-align: center;
+}
+.isotope-hidden.isotope-item {
+	pointer-events: none;
+	z-index: 1;
+}
+.isotope, .isotope .isotope-item {
+	-webkit-transition-duration: .6s;
+	   -moz-transition-duration: .6s;
+		-ms-transition-duration: .6s;
+		 -o-transition-duration: .6s;
+			transition-duration: .6s;
+	z-index: 2;
+}
+.isotope {
+	-webkit-transition-property: height, width;
+	   -moz-transition-property: height, width;
+		-ms-transition-property: height, width;
+		 -o-transition-property: height, width;
+			transition-property: height, width;
+}
+.isotope .isotope-item {
+padding-left: 10px;
+	-webkit-transition-property: -webkit-transform, opacity;
+	   -moz-transition-property:	-moz-transform, opacity;
+		-ms-transition-property:		 top, left, opacity;
+		 -o-transition-property:		 top, left, opacity;
+			transition-property:		 transform, opacity;
+}
+	.isotope-options {
+		margin: 0 10px 35px;
+		text-align: left;
+		text-transform: uppercase;
+	}
+
+		.isotope-options li {
+			display: block;
+			float: left;
+			margin-right: 20px;
+		}
+
+			.isotope-options li a {
+				color: grey;
+				font-weight: 600;
+				font-size: 11px;
+				cursor: pointer;
+			}
+			
+			.isotope-options li a:hover { 
+			color: #79be0b;
+			}
+			
+			.isotope-options li a.active{
+			color: #79be0b;
+			} 
+			
+			.isotope-options li a.selected{
+			color: #79be0b;
+			} 
+
+			.ie7 .isotope-options li a,
+			.ie8 .isotope-options li a { font-weight: 400; }
+
+/*COURSES TABS VIEW*/
+/*HEADER (CALC IMAGE...*/
+.calc {
+  float: right;
+}
+
+/*FILTERS......*/
+.course-views-exposed-form{
+}
+
+/*GRAB THE DATE DROP DOWN CLASS*/
+.form-item form-type-select form-item-ulearn-course-date-options{
+width: 120px;
+float: left;
+padding-right: 70px;
+}
+
+.views-widget{
+position: relative;
+top: 35px;
+}
+.view-course-date{
+width: 120px;
+float: left;
+padding-right: 70px;
+}
+/*GRAB THE WEEKS DROP DOWN ID; CLASS = 
+force-refresh commerce-pricing-attributes-item form-select required ajax-processed*/
+.course-views-exposed-widget.views-widget-filter-field_course_type_tid_1{
+float: left;
+position: relative;
+padding-left: 20px;
+}
+.course-views-exposed-widget.views-widget-sort-by{
+float: left;
+padding-left: 20px
+}
+.course-views-exposed-widget.views-widget-sort-order{
+float: left;
+position: relative;
+padding-left: 20px;
+}
+.course-views-exposed-widget.views-submit-button{
+float: left;
+position: relative;
+top: 28px;
+padding-left: 20px;
+}
+
+/*THE VIEW FIELDS ..........*/
+.view-courses table {
+  width: 100%;
+}
+
+.view-courses table td {
+  padding: 10px;
+  vertical-align: middle;
+}
+
+.view-courses .views-field-title {
+  font-family: dakota;
+  font-size: 16px;
+  width: 160px;
+}
+
+.view-courses .views-field-commerce-price {
+  width: 120px;
+}
+
+.edit-field-course-type-tid-1{
+  position: relative;
+  top: 12px;
+}
+
+.commerce-add-to-cart .form-item-ulearn-course-date-options,
+.commerce-add-to-cart .ulearn-course-field-course-week-wrapper {
+  display: inline-block;
+  vertical-align: top;
+}
+
+.commerce-add-to-cart .form-item-ulearn-course-date-options {
+  margin-right: 15px;
+}
+
+.commerce-add-to-cart .form-submit {
+  margin-top: 8px;
+}
+
+.force-refresh.commerce-pricing-attributes-item.form-select required.ajax-processed{
+float: left;
+}
+.em {
+float: left;
+width: 70px;
+}
+.edit-submit{
+position: relative;
+bottom: 13px;
+left: 10px;}
+
+
+#ctools-auto-submit-full-form.jquery-once-2-processed.ctools-auto-submit-processed.views-exposed-form-courses-page-search-course{
+border: 5px solid #79be0b;
+padding: 10px 25px;
+background: #C2C2C2;
+width: 186px;
+height: 138px;
+border-radius: 25px;
+}
+ 
+/*ACCOMMODATION TABS VIEW*/
+.view-accomm-video{
+float: left;
+}
+
+.view-accomm-body{
+float: left;
+position: relative;
+bottom: 45px;
+}
+.view-accomm-detail{
+}
+.commerce-add-to-cart.commerce-cart-add-to-cart-form-2{
+position: relative;
+right: 10px;
+}
+.form-item.form-type-textfield.form-item-quantity{
+position: relative;
+bottom: 20px;
+}
+.edit-line-item-fields-field-accommodation-dates-und-0-value-datepicker-popup-0{
+position: relative;
+bottom: 10px;
+}
+.addtocart-accomm{
+border: 5px solid #79be0b;
+padding: 10px 25px;
+background: #C2C2C2;
+width: 186px;
+height: 138px;
+border-radius: 25px;
+}
+.edit-line-item-fields-field-accommodation-dates-und-0-value{
+height: 15px;
+}
+.view-accomm-price{
+position: relative;
+top: 97px;
+white-space: nowrap;
+right: 40px;
+}
+.view-accomm-price-label{
+font-weight: bold;
+}
+
+.fieldset-legend{
+font-weight: bold;
+
+}
+.form-item.form-type-date-popup.form-item-line-item-fields-field-accommodation-dates-und-0-value{
+float: left;
+position: relative;
+right: 10px;
+}
+.views-row.views-row-1.views-row-odd.views-row-first.clearfix.outset.content-tabs{
+
+}
+.clearfix.outset {border-bottom-style:outset;}
+
+<<<<<<< HEAD
+
+=======
+>>>>>>> aacf5a8ce38f4f5384cbcb12767a48a38dc2be04
+
+
+
+

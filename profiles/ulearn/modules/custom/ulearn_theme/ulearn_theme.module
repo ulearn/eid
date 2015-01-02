@@ -1,0 +1,37 @@
+<?php
+/**
+ * @file
+ * Code for the ULearn theme feature.
+ */
+
+include_once 'ulearn_theme.features.inc';
+
+/**
+ * Implements hook_block_info().
+ */
+function ulearn_theme_block_info() {
+  $blocks = array();
+  $blocks['ulearn_theme_block_footer'] = array(
+    'info' => t('ULearn: Footer'),
+    'cache' => DRUPAL_CACHE_GLOBAL,
+    'weight' => 0,
+    'status' => 1,
+    'region' => 'footer_bottom',
+    'visibility' => BLOCK_VISIBILITY_NOTLISTED,
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function ulearn_theme_block_view($delta = '') {
+  $block = array();
+  switch ($delta) {
+    case 'ulearn_theme_block_footer':
+      $block['subject'] = NULL;
+      $block['content'] = t('ULearn English School Dublin');
+      break;
+  }
+  return $block;
+}

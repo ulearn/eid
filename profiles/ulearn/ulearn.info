@@ -1,0 +1,36 @@
+name = ulearn
+description = Install with pre-configured modules for Ulearn Booking platform.
+version = VERSION
+core = 7.x
+
+; Core dependencies
+dependencies[] = block
+dependencies[] = blog
+dependencies[] = color
+dependencies[] = comment
+dependencies[] = contextual
+dependencies[] = dashboard
+dependencies[] = help
+dependencies[] = image
+dependencies[] = list
+dependencies[] = menu
+dependencies[] = number
+dependencies[] = options
+dependencies[] = path
+dependencies[] = taxonomy
+dependencies[] = dblog
+dependencies[] = search
+dependencies[] = shortcut
+dependencies[] = field_ui
+dependencies[] = file
+dependencies[] = rdf
+
+; Contrib dependencies
+dependencies[] = filter_perms
+dependencies[] = module_filter
+dependencies[] = user_settings_access
+dependencies[] = special_menu_items
+dependencies[] = fapi_validation
+dependencies[] = stringoverrides
+; Custom dependencies
+dependencies[] = core_ulearn

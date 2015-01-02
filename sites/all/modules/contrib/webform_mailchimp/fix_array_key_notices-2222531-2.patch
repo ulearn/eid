@@ -1,0 +1,46 @@
+diff --git a/webform_mailchimp.module b/webform_mailchimp.module
+index 41cf3fa..4b14c12 100644
+--- a/webform_mailchimp.module
++++ b/webform_mailchimp.module
+@@ -43,11 +43,12 @@ function webform_mailchimp_webform_submission_insert($node, $submission) {
+         $mailchimp_lists[] = $field['extra']['mailchimp_list'];
+         // Need to know if we should look for our own email field or another.
+         if ($field['extra']['use_existing_email_field'] != 'mailchimp_field') {
+-          if (!empty($submission->data[$key][0])) {
++          if (!empty($submission->data[$key]['value'][0])) {
+             // Loop through components again to find our email field.
+             foreach ($node->webform['components'] as $key2 => $field2) {
+               if ($field2['form_key'] == $field['extra']['use_existing_email_field']) {
+-                $email_address = $submission->data[$key2][0];
++                $email_address = $submission->data[$key2]['value'][0];
++                break;
+               }
+             }
+           }
+@@ -58,7 +59,7 @@ function webform_mailchimp_webform_submission_insert($node, $submission) {
+         }
+         // We have our own email field.
+         else {
+-          $email_address = $submission->data[$key][0];
++          $email_address = $submission->data[$key]['value'][0];
+         }
+ 
+         // Retrieve mergefields and create a merge array with key webform key
+@@ -101,7 +102,7 @@ function webform_mailchimp_webform_submission_insert($node, $submission) {
+         if (!empty($mergefields_key_array[$field['form_key']])) {
+           // This is probably a bit to easy... The delta value is not taken
+           // into account.
+-          $mergefields_replacements[$mergefields_key_array[$field['form_key']]] = $submission->data[$key][0];
++          $mergefields_replacements[$mergefields_key_array[$field['form_key']]] = $submission->data[$key]['value'][0];
+         }
+       }
+     }
+@@ -121,7 +122,7 @@ function webform_mailchimp_webform_submission_insert($node, $submission) {
+             $sorted_choices[$id_name[0]] = $id_name[1];
+           }
+           foreach ($submission->data[$key] as $filled_out_value) {
+-            $groupfields_replacements[$groupfields_key_array[$field['form_key']]][] = str_replace(",", "\,", $sorted_choices[$filled_out_value]);
++            $groupfields_replacements[$groupfields_key_array[$field['form_key']]][] = str_replace(",", "\,", $sorted_choices[$filled_out_value['value']]);
+           }
+         }
+       }

@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Full Slider feature.
+ */
+
+include_once 'full_slider.features.inc';

@@ -1,0 +1,76 @@
+<?php
+
+/**
+ * @file
+ * Install / uninstall functions for ULearn CiviCRM module.
+ */
+
+/**
+ * Implements hook_install().
+ */
+function ulearn_civicrm_install(&$sandbox) {
+  // Update settings of Name and Address profile to display on user edit form.
+  ulearn_civicrm_update_uf_group('Name_and_Address');
+}
+
+/**
+ * Update settings of Name and Address profile to display on user edit form.
+ */
+function ulearn_civicrm_update_7100(&$sandbox) {
+  ulearn_civicrm_update_uf_group('Name_and_Address');
+}
+
+/**
+ * Display Name and Address profile on user registration form as well.
+ */
+function ulearn_civicrm_update_7101(&$sandbox) {
+  ulearn_civicrm_update_uf_group('Name_and_Address');
+}
+
+/**
+ * Remove unnecessary variables.
+ */
+function ulearn_civicrm_update_7102(&$sandbox) {
+  variable_del('ulearn_civicrm_contribution_status');
+  variable_del('ulearn_civicrm_payment_instrument');
+}
+
+/**
+ * Update CiviCRM profile.
+ */
+function ulearn_civicrm_update_uf_group($profile_name) {
+  if (civicrm_initialize()) {
+    // Get UFGroup 'Name and Address'.
+    $params = array(
+      'version' => 3,
+      'sequential' => 1,
+      'name' => $profile_name,
+    );
+    $result = civicrm_api('UFGroup', 'getsingle', $params);
+    $uf_group_id = $result['id'];
+    $weight = CRM_Core_BAO_UFGroup::getWeight($uf_group_id);
+
+    $uf_params = array(
+      'is_active' => $result['is_active'],
+      'title' => $result['title'],
+      'add_captcha' => $result['add_captcha'],
+      'is_map' => $result['is_map'],
+      'is_update_dupe' => $result['is_update_dupe'],
+      'is_edit_link' => $result['is_edit_link'],
+      'is_uf_link' => $result['is_uf_link'],
+      'is_cms_user' => $result['is_cms_user'],
+      'uf_group_type' => array('Profile' => 1, 'User Registration' => 1, 'User Account' => 1),
+      'weight' => $weight,
+    );
+
+    $ids = array('ufgroup' => $uf_group_id);
+    // Create uf group.
+    $ufGroup = CRM_Core_BAO_UFGroup::add($uf_params, $ids);
+    if ($result['is_active']) {
+      // Make entry in uf join table.
+      CRM_Core_BAO_UFGroup::createUFJoin($uf_params, $ufGroup->id);
+    }
+    // Update cms integration with registration / my account.
+    CRM_Utils_System::updateCategories();
+  }
+}

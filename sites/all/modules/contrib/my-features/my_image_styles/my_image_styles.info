@@ -1,0 +1,9 @@
+name = My Image Styles
+core = 7.x
+package = Features
+version = 7.x-1.0
+project = my_image_styles
+dependencies[] = image
+features[features_api][] = api:2
+features[image][] = md_slider_2_thumb
+features[image][] = slideshow_bg

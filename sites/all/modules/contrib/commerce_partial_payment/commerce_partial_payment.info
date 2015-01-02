@@ -1,0 +1,14 @@
+name = Commerce Partial Payment
+description = Allows users to make a partial payment at checkout.
+package = Commerce (contrib)
+core = 7.x
+dependencies[] = commerce
+dependencies[] = commerce_checkout
+dependencies[] = commerce_payment
+
+; Information added by drupal.org packaging script on 2013-09-30
+version = "7.x-1.x-dev"
+core = "7.x"
+project = "commerce_partial_payment"
+datestamp = "1380560561"
+

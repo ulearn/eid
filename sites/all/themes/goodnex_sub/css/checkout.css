@@ -1,0 +1,12 @@
+/** Checkout progress indicator block **/
+
+ol.commerce-checkout-progress {
+  margin-bottom: 20px;
+  margin-left: 15px;
+  margin-top: 20px;
+}
+
+ol.inline.commerce-checkout-progress li {
+  font-size: 15px;
+  width: 20%;
+}

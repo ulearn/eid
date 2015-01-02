@@ -1,0 +1,22 @@
+<?php
+/**
+ * @file
+ * Drupal needs this blank file.
+ */
+
+
+/**
+ * Implements hook_menu().
+ */
+function ulearn_contact_menu() {
+
+  $items['admin/config/ulearn/variables/ulearn_contact'] = array(
+    'title' => 'Ulearn Contact variables',
+    'description' => 'Ulearn Contact variable.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('variable_group_form', 'ulearn_contact'),
+    'access arguments' => array('administer ulearn'),
+  );
+
+  return $items;
+}

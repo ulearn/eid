@@ -1,0 +1,1 @@
+https://drupal.org/files/issues/commerce_option.module-fix_PDOException_duplicate_entry-1475592.patch

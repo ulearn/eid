@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the Nodes Portfolio feature.
+ */
+
+include_once 'nodes_portfolio.features.inc';
