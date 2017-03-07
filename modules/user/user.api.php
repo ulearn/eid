@@ -386,7 +386,7 @@ function hook_user_view_alter(&$build) {
 }
 
 /**
- * Act on a user role being inserted or updated.
+ * Inform other modules that a user role is about to be saved.
  *
  * Modules implementing this hook can act on the user role object before
  * it has been saved to the database.
@@ -405,7 +405,7 @@ function hook_user_role_presave($role) {
 }
 
 /**
- * Respond to creation of a new user role.
+ * Inform other modules that a user role has been added.
  *
  * Modules implementing this hook can act on the user role object when saved to
  * the database. It's recommended that you implement this hook if your module
@@ -426,7 +426,7 @@ function hook_user_role_insert($role) {
 }
 
 /**
- * Respond to updates to a user role.
+ * Inform other modules that a user role has been updated.
  *
  * Modules implementing this hook can act on the user role object when updated.
  * It's recommended that you implement this hook if your module adds additional
@@ -447,7 +447,7 @@ function hook_user_role_update($role) {
 }
 
 /**
- * Respond to user role deletion.
+ * Inform other modules that a user role has been deleted.
  *
  * This hook allows you act when a user role has been deleted.
  * If your module stores references to roles, it's recommended that you

@@ -1,0 +1,11 @@
+<?php
+
+/**
+ * @function
+ * Drop the enabled_modules_system table
+ */
+function enabled_modules_update_7102() {
+  db_drop_table('enabled_modules_system');
+}
+
+

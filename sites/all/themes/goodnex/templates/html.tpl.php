@@ -16,7 +16,7 @@ not-ie" lang="<?php print $language->language; ?>" dir="<?php print $language->d
 <![endif]-->
 <!-- Web Fonts  -->
 <link href='http://fonts.googleapis.com/css?family=Open+Sans:300,400,600,600italic|Handlee' rel='stylesheet' type='text/css'>
-<?php goodnex_user_css(); ?>  
+<?php goodnex_user_css(); ?>
 <?php if ( (theme_get_setting('sticky_header') == '1') ): ?>
 <script type='text/javascript' src='<?php global $parent_root; echo $parent_root; ?>/js/sticky.js'></script>
 <?php endif; ?>

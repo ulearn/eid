@@ -1838,7 +1838,8 @@ body.boxed { background-attachment: fixed; }
 		.simple-pricing-table .features {
 			border-top: 1px solid #d7d7d7;
 			border-bottom: 1px solid #d7d7d7;
-		}		
+			text-overflow: ellipsis; }			
+
 			.simple-pricing-table .features li {
 				position: relative;
 				padding: 10px 20px;
@@ -1847,6 +1848,7 @@ body.boxed { background-attachment: fixed; }
 				border-top-color: #e6e6e6;
 				background-color: #f6f6f6;
 				text-align: center;
+				text-overflow: ellipsis; 
 			}
 			.simple-pricing-table .features li:first-child { border-top: none; }
 			.simple-pricing-table .featured .features li { background-color: #fefefe; }
