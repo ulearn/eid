@@ -1,0 +1,178 @@
+/**
+ * @file
+ * A file to help make the site more responsive.
+ *
+ * Created by Mark C. I'm using this as a first pass attempt to make the
+ * adaptive layout more reponsive. As we/client is happy with each item, we
+ * can try to move them back into their correct stylesheets - e.g. custom.css
+ */
+
+/* Styling for small devices */
+@media all and (max-width: 800px) {
+  /* Make the default container flexible */
+  .container {
+    width: 90%;
+  }
+
+  /* let the content area fill the above flexibily */
+  .container .one.column,
+  .container .one.columns,
+  .container .two.columns,
+  .container .three.columns,
+  .container .four.columns,
+  .container .five.columns,
+  .container .six.columns,
+  .container .seven.columns,
+  .container .eight.columns,
+  .container .nine.columns,
+  .container .ten.columns,
+  .container .eleven.columns,
+  .container .twelve.columns,
+  .container .thirteen.columns,
+  .container .fourteen.columns,
+  .container .fifteen.columns,
+  .container .sixteen.columns,
+  .container .one-third.column,
+  .container .two-thirds.column,
+  .container #main .one.column,
+  .container #main .one.columns,
+  .container #main .two.columns,
+  .container #main .three.columns,
+  .container #main .four.columns,
+  .container #main .five.columns,
+  .container #main .six.columns,
+  .container #main .seven.columns,
+  .container #main .eight.columns,
+  .container #main .nine.columns,
+  .container #main .ten.columns,
+  .container #main .eleven.columns,
+  .container #main .twelve.columns,
+  .container #main .thirteen.columns,
+  .container #main .fourteen.columns,
+  .container #main .fifteen.columns,
+  .container #main .sixteen.columns,
+  .container #main .one-third.column,
+  .container #main .two-thirds.column
+   {
+    width: 100%;
+  }
+
+  /* Don't let paragraphs wrap/float on small screens */
+  .field-name-body p {
+    width: 100%;
+  }
+
+  /* The photoscene class is wrapping to two lines on small screens and making
+  the paragraph text float up beside it. */
+  .field-name-body .photoscene {
+    overflow: hidden;
+  }
+
+  /* The pricegen charts are a bit to the left, let's space them out more evenly*/
+  .field-name-body .pricegen {
+    width: 32%;
+  }
+
+  /* Make videos 100% width on small screens */
+  /* E.G. at /course/learn_english_ireland */
+  .vid-left {
+    float: none;
+    margin: 16px 0 24px;
+    padding: 0;
+  }
+  /* This is the div surrounding the video on above link - div a */
+  .viddiva {
+    float: none;
+    width: 100%
+  }
+  /* This is the div surrounding the pricing table (beside the video) on above link - div b */
+  .viddivb {
+    width: 100%;
+  }
+
+  /* Make the sidebar 100% width on small screens */
+  #sidebar {
+    width: 100%;
+  }
+
+  /* Make the table for the course calculator 100% */
+  .rwd-table {
+    width: 100%;
+  }
+
+  /* Course title on course selector */
+  .view-course-title {
+    width: 100%;
+  }
+
+  .view-courses td.view-course-title {
+    text-align: left;
+  }
+
+  .view-courses td.course-registration-fee {
+    text-align: left;
+  }
+
+  /* Commerce progress indicator is squashed on small screens */
+  ol.inline.commerce-checkout-progress li {
+    width: 100%;
+  }
+  ol.inline.commerce-checkout-progress li.active {
+    color: #01B25A;
+  }
+
+  /* The page header position makes the content below be too close to it to read */
+  .page-header {
+    margin-bottom: 20px;
+  }
+
+  /* The accommodation view /accommodation/apartments is making the add to cart
+  block be laid over the content below it, because it has a defined height.
+  Let's remove that. */
+  .view-accommodation .view-accomm-detail .addtocart-accomm {
+    height: auto;
+    margin: 0 auto 32px;
+  }
+
+  /* The price on the above item is too far to the right, let's align it.*/
+  .view-accommodation .view-accomm-price {
+    right: 0;
+  }
+
+  /* The views title field for above is being covered in some instances by the
+  price (probably because the price is postioned using the position: relative
+  property). This is an attempt to fix that. */
+  .view-accommodation .views-field.views-field-title {
+    margin: 32px 0 0;
+  }
+
+  /* The map block on the 'Contact Us' page is taking up 100% so is hard to
+  scroll past on a phone. Making it smaller so at least there is room beside it
+  to use for scrolling.  */
+  #block-block-58 {
+    margin: auto;
+    max-width: 85%;
+  }
+  /* The form fields are all different widths for webform. Let's standardise them. */
+  .webform-client-form .form-text,
+  .webform-client-form .form-select,
+  .webform-client-form .form-textarea,
+  .webform-client-form .grippie {
+    width: 100% !important;
+  }
+
+  /* And let's do the same for webforms in blocks. */
+  .block-webform .webform-client-form .form-text,
+  .block-webform .webform-client-form .form-select,
+  .block-webform .webform-client-form .form-textarea,
+  .block-webform .webform-client-form .grippie {
+    width: 100% !important;
+  }
+
+  /* The registration fee line item is squashed on phones. Let's give it a line
+  of its own. */
+  .view-courses td.course-registration-fee {
+    clear: both;
+  }
+
+}

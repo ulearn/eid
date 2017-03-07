@@ -1,6 +1,12 @@
 <?php
 ?>
 <head>
+<!-- Put Scripts Here -->
+<link rel="publisher" href=" https://plus.google.com/u/0/112298331569691583207/about"/>
+<script type="text/javascript" async defer
+  src="https://apis.google.com/js/platform.js?publisherid=112298331569691583207">
+</script>
+
 </head>
 <div id="wrapper">
 <header id="header">

@@ -30,7 +30,6 @@ dependencies[] = field_collection
 dependencies[] = field_permissions
 dependencies[] = field_validation
 dependencies[] = field_validation_ui
-dependencies[] = fullcalendar
 dependencies[] = image
 dependencies[] = inline_entity_form
 dependencies[] = node

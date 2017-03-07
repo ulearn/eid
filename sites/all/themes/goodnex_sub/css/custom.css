@@ -6,33 +6,98 @@
 4. PORTFOLIO SINGLE IMAGE (NOW USED FOR "COURSES DISPLAY")
 5. ISOTOPE
 5. HOME PAGE
-6. ABOUT US 
+6. ABOUT US
 7. TEAM
+8. ACCOMMODATION ADDON IN CART - ANNERTECH
  */
-  /*COMBINE IMAGES TO SPRITES 
+ 
+.eight columns {
+height: auto;
+}
+
+/*BOOKING FORM FIELD SIZES*/ 
+=======
+
+/*BOOKING FORM FIELD SIZES*/
+
+.edit-submitted-first-name{
+width: 80%;
+}
+/*#edit-submitted-surname{
+width: 80%;
+}*/
+
+.booking-first{
+width: 80%;
+}
+.booking-surname{
+width: 80%;
+}
+.booking-email{
+width: 80%;
+}
+.booking-tel{
+width: 80%;
+}
+
+/*WEBFORM FIELD SIZES*/
+#edit-submitted-first-name--2{
+width: 100%;
+}
+#edit-submitted-telephone--2{
+width: 100%;
+}
+#edit-submitted-last-name{
+width: 100%;
+}
+#edit-submitted-last-name--2{
+width: 100%;
+}
+#edit-submitted-email--2{
+width: 100%;
+}
+#edit-submitted-name{
+width: 100%;
+}
+#edit-submitted-layout-your-email{
+width: 100%;
+}
+#edit-submitted-layout-your-friends-email{
+width: 100%;
+}
+.cupcake {
+background: url(/sites/default/files/images/promo/refer/happy-plan-no-badge.png);
+height: 796px;
+width: 960px;
+text-align: center;
+padding-top: 30px;
+}
+  /*COMBINE IMAGES TO SPRITES
  a.contextual-links-trigger {
   background-image: url(../images/sprite/spriteme1.png);
   background-position: -18px -78px;
 }
-
 body.adminimal-menu div#admin-menu ul.dropdown span.admin-menu-home-icon {
   background-image: url(../images/sprite/spriteme1.png);
   background-position: -18px -78px;
 }
-
 .resizable-textarea .grippie {
   background-image: url(../images/sprite/spriteme1.png);
   background-position: -18px -78px;
 }
 */
-/* ADJUST FONT SIZE FOR MOBILE - TRIED font-size: 1.5vw; BUT NO WORK IN DIVS... */
+/* ADJUST FONT SIZE FOR MOBILE - TRIED font-size: 1.5vw; BUT NO WORK IN DIVS...
+1) @media only screen and (min-width: 480px) and (max-width: 767px)
+2) @media only screen and (min-width: 480px) and (max-width: 767px)
+3) @media only screen and (min-width: 80px) and (max-width: 767px)
+*/
 @media only screen and (min-width: 480px) and (max-width: 767px) {
-.h2 { 
+.h2 {
 font-size: 18px;
 	}
 }
 @media only screen and (min-width: 480px) and (max-width: 767px) {
-.h3 { 
+.h3 {
 font-size: 12px;
 	}
 }
@@ -44,7 +109,6 @@ font-size: 12px;
 		max-width: 50px;
 	}
 }
-
 .sidebanner{
 float: left;
 }
@@ -69,9 +133,30 @@ width: 100%;
 #edit-submitted-email{
 width: 100%;
 }
- <h4 class="title">
+<h4 class="title">
 select {
   padding-right: 18px;
+}
+/*SPECIAL OFFER PAGE*/
+.strip-grn{
+border-left: thick solid #79BE0B;
+border-right: thick solid #79BE0B;
+    padding-left: 2px;
+}
+.strip-orng{
+border-left: thick solid #FF6600;
+border-right: thick solid #FF6600;
+    padding-left: 2px;
+}
+.strip-blue{
+border-left: thick solid #6599FF;
+border-right: thick solid #6599FF;
+    padding-left: 2px;
+}
+.pricejun{
+float: left;
+width: 32%;
+padding-right: 1%;
 }
 .pricel{
 float: left;
@@ -83,7 +168,26 @@ width: 48%;
 }
 .pricegen{
 float: left;
+width: 45%;
+padding-right: 5px;
+}
+.pricegen3col{
+float: left;
 width: 29%;
+padding-right: 5px;
+}
+.priceacm{
+float: left;
+width: 40%;
+padding-right: 3px;
+}
+.footer2{ 
+padding: 10px 10px 10px;
+background-color: #e6e6e6;
+		}
+.pricegen-four{
+float: left;
+width: 22%;
 padding-right: 5px;
 }
 #block-block-73{
@@ -121,7 +225,7 @@ top: 35px;
  .tel{
 float: right;
  }
- 
+
  .lang-top{
  width: 100%;
  }
@@ -152,12 +256,12 @@ padding-right: 6px;
 .notice {
 		float: left;
 		padding: 10px;
-	}	
+	}
 .info {
 		float: left;
 		padding: 10px;
 	}
-	
+
 .container{
   padding-right: 10px;
 padding-top: 5px;
@@ -199,7 +303,7 @@ display: none;
   clear: both;
   display: block;
   height: 0;
-  overflow: hidden; 
+  overflow: hidden;
   visibility: hidden;
   width: 0;
 }
@@ -351,7 +455,7 @@ bottom: 20px;
 /*	Page Header
 /* ---------------------------------------------------------------------- */
 #region region-header-left ul li {
-display: inline; 
+display: inline;
 padding: 3px
 }
 /*USED TO SINK ELEMENTS UNDER FRONT PAGE HEADER */
@@ -363,13 +467,13 @@ width: 100%;
 @media only screen and (max-width: 767px) {
 .headerfront {
 position: relative;
-width: 100%; 
+width: 100%;
 	}
 }
 @media only screen and (min-width: 480px) and (max-width: 767px) {
 .headerfront {
 position: relative;
-width: 100%; 
+width: 100%;
 	}
 }
 
@@ -378,7 +482,7 @@ position: relative;
 z-index: 99;
 }
 #region region-header-left ul li {
-display: inline; 
+display: inline;
 padding: 3px
 }
 
@@ -394,7 +498,7 @@ padding: 3px
 	border-bottom-width: 2px;
 	-webkit-border-image: url(../images/scribble/border-line.png) 2 repeat;
 	   -moz-border-image: url(../images/scribble/border-line.png) 2 repeat;
-			border-image: url(../images/scribble/border-line.png) 2 repeat;	
+			border-image: url(../images/scribble/border-line.png) 2 repeat;
 }
 
 	.page-header h1 {
@@ -404,7 +508,7 @@ padding: 3px
 		font-size: 30px;
 		line-height: 1.25;
 	}
-	
+
 /* NOT SURE ABOUT THIS.... 26.05.2014.....
 
 #slider-home{
@@ -421,7 +525,7 @@ z-index: 1;
 	/*	PORTFOLIO SLIDER DISPLAY - NOW USED ON "COURSES"
 	/* -------------------------------------------------- */
 
-	
+
 	.image-gallery-slider {
 	width: auto;
 	}
@@ -430,11 +534,11 @@ z-index: 1;
 	.image-gallery-slider ul li {
 	width: auto;
 	}
-	
-	
-	
-	
-	
+
+
+
+
+
 	.image-post-slider,
 	.image-gallery-slider {
 		position: relative;
@@ -457,7 +561,7 @@ z-index: 1;
 		.image-gallery-slider > ul > li { width: auto!important;}
 
 		.image-post-slider > ul > li:first-child,
-		.image-gallery-slider > ul > li:first-child { 
+		.image-gallery-slider > ul > li:first-child {
 			width: auto!important;
 		}
 
@@ -507,7 +611,7 @@ z-index: 1;
 			.scribble .gallery-slider-nav a { background-image: url(../images/scribble/bg-light.png); }
 
 			.post-slider-nav .prevBtn,
-			.gallery-slider-nav .prevBtn { 
+			.gallery-slider-nav .prevBtn {
 				left: 0;
 				float: left;
 			}
@@ -554,7 +658,7 @@ z-index: 1;
 				font-family: "Open Sans", Arial;
 				cursor: pointer;
 			}
-			
+
 			.ie7 .portfolio-filter li a,
 			.ie8 .portfolio-filter li a { font-weight: 400; }
 
@@ -566,7 +670,7 @@ z-index: 1;
 /* -------------------------------------------------- */
 	/*	Portfolio Items
 	/* -------------------------------------------------- */
-	
+
 	.portfolio-items { font-size: 0; }
 
 		.container .portfolio-items article {
@@ -578,21 +682,21 @@ z-index: 1;
 		}
 
 		.portfolio-items article .single-image,
-		.jcarousel-container .single-image { 
-		width: auto; 
+		.jcarousel-container .single-image {
+		width: auto;
 		margin: 0; }
-		
-			.single-image img { 
-			width: auto; 
+
+			.single-image img {
+			width: auto;
 			display: block; }
-			
+
 			.preloader {
 				background-position: center center;
 				background-repeat: no-repeat;
 			}
-			
+
 			.preloader.loader { background-image: url(../images/preloader.gif); }
-			
+
 				.preloader img:not(.BWFilter) {
 					opacity: 0;
 					-webkit-transition: all .25s linear;
@@ -613,11 +717,11 @@ z-index: 1;
 			border-bottom-color: #ebebeb;
 			font-size: 11px;
 		}
-		
+
 		.scribble .project-meta {
 			 border-bottom-color: transparent !important;
 		}
-		
+
 		.scribble .project-meta:after {
 			position: absolute;
 			bottom: 0;
@@ -628,18 +732,18 @@ z-index: 1;
 			background-image: url(../images/scribble/line-light.png);
 			content: "";
 		}
-		
+
 		.scribble article:hover .project-meta { border-bottom-color: transparent !important; }
 		.portfolio-items article:hover .project-meta { background-color: #f9f9f9; }
 
-			.project-meta .title { 
+			.project-meta .title {
 				margin-bottom: 5px;
 				color: #383838;
 				font-weight: 700;
 				font-size: 12px;
 				font-family: "Arial";
-			} 
-			
+			}
+
 			.project-meta .categories { display: block; }
 
 
@@ -672,16 +776,13 @@ z-index: 1;
 				font-family: "Open Sans", Arial;
 				cursor: pointer;
 			}
-			
+
 			.ie7 .video-filter li a,
 			.ie8 .video-filter li a { font-weight: 400; }
-
 	/* -------------------------------------------------- */
 	/*	video Items
 	/* -------------------------------------------------- */
-	
 	.video-items { font-size: 0; }
-
 		.container .video-items article {
 			position: relative;
 			display: inline-block;
@@ -689,28 +790,21 @@ z-index: 1;
 			vertical-align: top;
 			margin-bottom: 40px;
 		}
-
 		.video-items article .single-image,
 		.jcarousel-container .single-image { margin: 0; }
-		
 			.single-image img { display: block; }
-			
 			.preloader {
 				background-position: center center;
 				background-repeat: no-repeat;
 			}
-			
 			.preloader.loader { background-image: url(../images/preloader.gif); }
-			
 				.preloader img:not(.BWFilter) {
 					opacity: 0;
 					-webkit-transition: all .25s linear;
 					   -moz-transition: all .25s linear;
 							transition: all .25s linear;
 				}
-
 				.preloader .fadein { opacity: 1 !important; }
-
 		.project-meta {
 			position: relative;
 			display: block;
@@ -722,11 +816,9 @@ z-index: 1;
 			border-bottom-color: #ebebeb;
 			font-size: 11px;
 		}
-		
 		.scribble .project-meta {
 			 border-bottom-color: transparent !important;
 		}
-		
 		.scribble .project-meta:after {
 			position: absolute;
 			bottom: 0;
@@ -737,30 +829,24 @@ z-index: 1;
 			background-image: url(../images/scribble/line-light.png);
 			content: "";
 		}
-		
 		.scribble article:hover .project-meta { border-bottom-color: transparent !important; }
 		.video-items article:hover .project-meta { background-color: #f9f9f9; }
-
-			.project-meta .title { 
+			.project-meta .title {
 				margin-bottom: 5px;
 				color: #383838;
 				font-weight: 700;
 				font-size: 12px;
 				font-family: "Arial";
-			} 
-			
+			}
 			.project-meta .categories { display: block; }
-			
 	/* -------------------------------------------------- */
 	/*	video Controls
-	/* -------------------------------------------------- */	
-			
-	.video-controls { 
-		float: right; 
+	/* -------------------------------------------------- */
+	.video-controls {
+		float: right;
 		padding: 8px 0;
-		font-size: 0; 
+		font-size: 0;
 	}
-
 		.video-controls a {
 			display: inline-block;
 			overflow: hidden;
@@ -772,44 +858,30 @@ z-index: 1;
 			background-repeat: no-repeat;
 			font: 0/0 a;
 			cursor: pointer;
-			
+
 			-webkit-transition: all .2s linear;
 			   -moz-transition: all .2s linear;
 				-ms-transition: all .2s linear;
 				 -o-transition: all .2s linear;
 					transition: all .2s linear;
 		}
-		
 		.video-controls .controls-all  { background-position: center; }
 		.video-controls .controls-next { background-position: right; }
-		
-
-
-
-
 /*=======================================================================
 *** PORTO_SUB STYLE SHEET***
-
 	#header {
 		z-index: 99;
 		/* background-image: url(../images/patterns/grey-bk.png);*/
-		
-		
 		/*  background: rgba(0,0,0,.7);
 		padding-bottom: 15px;
 
 	}
-
-
 .block-md-slider-1{
 position: relative;
 bottom: 150px;
 z-index: -1;
 }
-
-
 ========================================================================*/
-
 /*ABOUT US PAGE*/
 .photo-one{
 position: relative;
@@ -821,12 +893,10 @@ position: relative;
 float: left;
 padding: 0px 2px 0px 0px;
 }
-
 /* 7. TEAM */
 .jcarousel {
 
 }
-
 .jcarousel li {
 
 }
@@ -834,7 +904,6 @@ padding: 0px 2px 0px 0px;
 display:none;
 }
 /* END TEAM */
-
 
 /*FOOTER STUFF*/
 #footer{
@@ -846,26 +915,21 @@ background-color: #b6d82f;
 .widget.video .flex-video {
   margin-bottom: 0;
 }
-
 /* Twitter Widget */
 .widget.twitter ul {
   margin-bottom: -15px;
 }
-
 .widget.twitter li {
   display: block;
 }
-
 .widget.twitter a,
 .widget.twitter a * {
   color: #b6d82f;
 }
-
 .widget.twitter a.url {
   color: #61c2ef;
   font-style: italic;
 }
-
 .widget.twitter a:hover {
   text-decoration: underline;
 }
@@ -877,12 +941,10 @@ background-color: #b6d82f;
   background: #b6d82f;
   padding: 20px 0;
 }
-
 #footer .widget {
   color: #fff;
   margin-bottom: 30px;
 }
-
 /* Widget Title */
 #footer .widget-title {
 font-size: large;
@@ -907,7 +969,6 @@ font-size: large;
   margin: 30px 0 20px 0;
   position: relative;
 }
-
 #back-to-top a {
   position: absolute;
   width: 58px;
@@ -921,25 +982,21 @@ font-size: large;
   box-shadow: 0 0 0 4px rgba(0,0,0,.11);
   background: #b6d82f url(../images/back-to-top-arrow.png) no-repeat center;
 }
-
 #back-to-top a:hover {
   opacity: 0.80;
   -moz-opacity: 0.80;
-  filter:alpha(opacity=80); 
+  filter:alpha(opacity=80);
 }
-
 /* Copyright */
 .copyright {
   float: left;
   font-size: 0.846em;
   line-height: 32px;
 }
-
 /* Social Icons */
 .social-icons {
   float: right;
 }
-
 .social-icons a {
   display: inline-block;
   width: 32px;
@@ -947,25 +1004,21 @@ font-size: large;
   margin-left: 11px;
   background: transparent no-repeat center;
 }
-
 .social-icons .pinterest-icon { background-image: url(../images/icons/pinterest-icon.png); }
 .social-icons .facebook-icon { background-image: url(../images/icons/facebook-icon.png); }
 .social-icons .twitter-icon { background-image: url(../images/icons/twitter-icon.png); }
-
 .social-icons a:hover {
   opacity: 0.80 !important;
   -moz-opacity: 0.80 !important;
   filter:alpha(opacity=80) !important;
 }
-
+/** Main System block **/
 .eight.columns{
-height:45px;
+height:auto;
 }
-
 .fixed#header {
 height: 120px;
 }
-
 /** Main System block **/
 #block-system-main {
   clear: both;
@@ -986,8 +1039,8 @@ height: 120px;
 		font-size: 14px;
 		font-family: "Open Sans", Arial;
 	}
-	
-		blockquote p { margin: .7em 0; }	
+
+		blockquote p { margin: .7em 0; }
 
 .view-commerce-cart-form table.views-table,
 .view-commerce-cart-summary table.views-table,
@@ -999,7 +1052,7 @@ table.checkout-review {
   text-align: right;
 }
 
-/* WISTIA VIDEO MODULE DISPLAY 
+/* WISTIA VIDEO MODULE DISPLAY
 .media-wistia-video {
   padding: 10px 40px;
   background-color: rgb(221, 221, 221);
@@ -1009,3 +1062,44 @@ table.checkout-review {
   border-bottom-left-radius: 25px;
 }
 */
+
+/* Accommodation Addon in Cart - Annertech */
+
+.accommodation-add-on-content .views-field-title {
+  padding: 16px;
+}
+.accommodation-add-on-content img {
+  width: 100%;
+}
+
+.view-accommodation-list-add-on .form-text {
+  border: 2px solid grey;
+}
+
+.view-accommodation-list-add-on .form-item-quantity {
+  margin-top: 16px !important;
+}
+
+@media all and (min-width: 767px) {
+  .accommodation-add-on-content {
+    box-sizing: border-box;
+    float: left;
+    padding-right: 16px;
+    width: 66%;
+  }
+  .accommodation-add-on-cart {
+    box-sizing: border-box;
+    float: left;
+    padding-left: 16px;
+    width: 33%;
+  }
+  .accommodation-add-on-content img {
+    width: 49%;
+  }
+}
+
+/* Need to clear this region or else the "ULearn is proudly associated with"
+block title rises up towards the top of the page - Mark C. */
+.region-after-content {
+  clear: both;
+}

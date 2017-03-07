@@ -32,13 +32,13 @@ Drupal.behaviors.dashboard = {
           empty_text = Drupal.settings.dashboard.emptyRegionTextInactive;
         }
         // We need a placeholder.
-        if ($('.dashboard-placeholder', this).length == 0) {
-          $(this).append('<div class="dashboard-placeholder"></div>');
+        if ($('.placeholder', this).length == 0) {
+          $(this).append('<div class="placeholder"></div>');
         }
-        $('.dashboard-placeholder', this).html(empty_text);
+        $('.placeholder', this).html(empty_text);
       }
       else {
-        $('.dashboard-placeholder', this).remove();
+        $('.placeholder', this).remove();
       }
     });
   },

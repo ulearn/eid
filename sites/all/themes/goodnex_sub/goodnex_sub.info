@@ -1,5 +1,5 @@
 name = Goodnex sub
-description = A sub-theme of Goodnex. 
+description = A sub-theme of Goodnex.
 core = 7.x
 engine = phptemplate
 
@@ -13,6 +13,13 @@ stylesheets[all][] = css/blocks.css
 stylesheets[all][] = css/views.css
 stylesheets[all][] = css/revslider.css
 stylesheets[all][] = css/widgets.css
+stylesheets[all][] = /sites/all/themes/launchrocket/css/launchrocket.css
+stylesheets[all][] = /sites/all/themes/launchrocket/css/workstation.css
+stylesheets[all][] = /sites/all/themes/launchrocket/css/handheld.css
+stylesheets[all][] = /sites/all/themes/launchrocket/css/bootstrap-theme.css
+stylesheets[all][] = /sites/all/themes/launchrocket/css/bootstrap-theme.min.css
+stylesheets[all][] = /sites/all/themes/launchrocket/css/bootstrap.css
+stylesheets[all][] = css/responsive-helpers.css
 
 ;Scripts
 scripts[] = 'js/submitfield.js'
@@ -26,6 +33,7 @@ regions[header_right] = Header Right
 regions[header_menu] = Header Menu
 regions[header_search] = Header Search
 regions[slider-home] = Slider Home
+regions[slider_full] = Slider Full
 regions[before_content_no_wrap] = Before Content No Wrap
 regions[before_content] = Before Content
 regions[content] = Content

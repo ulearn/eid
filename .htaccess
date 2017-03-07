@@ -32,25 +32,16 @@ DirectoryIndex index.php index.html index.htm
   php_value mbstring.http_input             pass
   php_value mbstring.http_output            pass
   php_flag mbstring.encoding_translation    off
-  php_value memory_limit 512M
 </IfModule>
 
 # Requires mod_expires to be enabled.
 <IfModule mod_expires.c>
   # Enable expirations.
   ExpiresActive On
-ExpiresByType image/jpg "access 1 year"
-ExpiresByType image/jpeg "access 1 year"
-ExpiresByType image/gif "access 1 year"
-ExpiresByType image/png "access 1 year"
-ExpiresByType text/css "access 1 month"
-ExpiresByType application/pdf "access 1 month"
-ExpiresByType application/x-javascript "access 1 month"
-ExpiresByType application/x-shockwave-flash "access 1 month"
-ExpiresByType image/x-icon "access 1 year"
-ExpiresDefault "access 2 days"
+
   # Cache all files for 2 weeks after access (A).
   ExpiresDefault A1209600
+
   <FilesMatch \.php$>
     # Do not allow PHP scripts to be cached unless they explicitly send cache
     # headers themselves. Otherwise all scripts would have to overwrite the
@@ -61,14 +52,10 @@ ExpiresDefault "access 2 days"
   </FilesMatch>
 </IfModule>
 
-
 # Various rewrite rules.
 <IfModule mod_rewrite.c>
   RewriteEngine on
-  RedirectMatch 301 /pt-br/(.*) /pt/$1
-  RewriteRule ^pt-br/(.*)$ /pt/$1 [R=301,NC,L]
-  RewriteRule ^pt-br /pt [R=301,NC,L]
-  
+
   # Set "protossl" to "s" if we were accessed via https://.  This is used later
   # if you enable "www." stripping or enforcement, in order to ensure that
   # you don't bounce between http and https.
@@ -109,19 +96,19 @@ ExpiresDefault "access 2 days"
   # To redirect all users to access the site WITHOUT the 'www.' prefix,
   # (http://www.example.com/... will be redirected to http://example.com/...)
   # uncomment the following:
-   RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
-   RewriteRule ^ http%{ENV:protossl}://%1%{REQUEST_URI} [L,R=301]
+  # RewriteCond %{HTTP_HOST} ^www\.(.+)$ [NC]
+  # RewriteRule ^ http%{ENV:protossl}://%1%{REQUEST_URI} [L,R=301]
 
   # Modify the RewriteBase if you are using Drupal in a subdirectory or in a
   # VirtualDocumentRoot and the rewrite rules are not working properly.
   # For example if your site is at http://example.com/drupal uncomment and
   # modify the following line:
-  # RewriteBase /drupal
+  RewriteBase /
   #
   # If your site is running in a VirtualDocumentRoot at http://example.com/,
   # uncomment the following line:
-  RewriteBase /
-  
+  # RewriteBase /
+
   # Pass all requests not referring directly to files in the filesystem to
   # index.php. Clean URLs are handled in drupal_environment_initialize().
   RewriteCond %{REQUEST_FILENAME} !-f

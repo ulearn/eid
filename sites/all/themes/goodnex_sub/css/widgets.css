@@ -230,14 +230,14 @@ span.mail {
   background: #888;
   background: rgba(0,0,0,0.5);
   color: #fff;
-  width: 48%;
+  width: 98%;
   margin-bottom: 11px;
   border: none;
 }
 
-.widget.contact-us input[type="text"] {
+/*.widget.contact-us input[type="text"] {
   float: right;
-}
+}*/
 .widget.contact-us select{
   border-radius: 5px;
   outline: none;
@@ -255,7 +255,7 @@ span.mail {
   background: #888;
   background: rgba(0,0,0,0.5);
   color: #fff;
-  width: 48%;
+  width: 98%;
   margin-bottom: 11px;
   border: none;
 }

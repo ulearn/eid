@@ -1,0 +1,19 @@
+
+name = Enabled modules
+description = Show enabled, missing, and recently toggled modules.
+package = Development
+core = 7.x
+
+dependencies[] = views
+dependencies[] = views_system
+
+files[] = enabled_modules.install
+files[] = enabled_modules.module
+files[] = enabled_modules.views_default.inc
+
+; Information added by drupal.org packaging script on 2012-01-29
+version = "7.x-1.0-beta3"
+core = "7.x"
+project = "enabled_modules"
+datestamp = "1327798453"
+

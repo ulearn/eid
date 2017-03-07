@@ -1,0 +1,27 @@
+From d2305e371850038b2cbf4583d602115d3e671590 Mon Sep 17 00:00:00 2001
+From: srobertson <srobertson@acromediainc.com>
+Date: Tue, 29 Apr 2014 15:43:40 -0700
+Subject: [PATCH] Issue #2220707 by danmurf: Fix filesize() exception being
+ thrown before buffer is flushed
+
+---
+ xmlsitemap.xmlsitemap.inc | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/xmlsitemap.xmlsitemap.inc b/xmlsitemap.xmlsitemap.inc
+index 94fdef1..72c8bd7 100644
+--- a/xmlsitemap.xmlsitemap.inc
++++ b/xmlsitemap.xmlsitemap.inc
+@@ -152,6 +152,9 @@ class XMLSitemapWriter extends XMLWriter {
+     //  file_put_contents($file_gz, gzencode(file_get_contents($file), 9));
+     //}
+ 
++    // Flush the buffer to write it to the file.
++    parent::flush();
++
+     if (!filesize($this->uri)) {
+       throw new XMLSitemapGenerationException(t('Generated @file resulted in an empty file.', array('@file' => $this->uri)));
+     }
+-- 
+1.8.4.msysgit.0
+

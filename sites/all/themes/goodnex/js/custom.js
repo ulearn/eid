@@ -52,8 +52,8 @@
 			$('.responsive-nav').on('change', function () {
 				win.location = $(this).val();
 			});
-			
-			
+
+
 
 		}());
 
@@ -153,7 +153,7 @@
 		});
 
 	}catch(err){}
-		
+
 		/* ---------------------------------------------------- */
 		/*	Tabs												*/
 		/* ---------------------------------------------------- */
@@ -851,17 +851,17 @@
 
 					$(win).load(function () {
 						$bw.BlackAndWhite(objBlackAndWhiteTouch);
-					});	
+					});
 
 				} else {
 
 					$(win).load(function () {
 						$bw.BlackAndWhite(objBlackAndWhite);
-					});			
-				}	
+					});
+				}
 
 			}
-				
+
 		}());
 
 		/* end BlackAndWhite --> End */
@@ -896,12 +896,12 @@
 
 				// Filter projects
 				$itemsFilter.on('click', 'a', function (e) {
-					
+
 					var $this = $(this), currentOption = $this.attr('data-categories');
 
 					$itemsFilter.find('a').removeClass('active');
 					$this.addClass('active');
-					
+
 					if (currentOption) {
 						if (currentOption !== '*') {
 							currentOption = currentOption.replace(currentOption, '.' + currentOption);
@@ -911,14 +911,14 @@
 						}, function() {
 							if (currentOption == '*') {
 								$('.single-image', $cont).attr('rel', 'gallery');
-							} else { 
+							} else {
 								$(currentOption, $cont).find('.single-image').attr('rel', currentOption.substring(1));
 							}
 						});
 					}
 					e.preventDefault();
 				});
-				
+
 				$itemsFilter.find('a').first().addClass('active');
 			}
 
@@ -955,12 +955,12 @@
 
 				// Filter projects
 				$itemsFilter.on('click', 'a', function (e) {
-					
+
 					var $this = $(this), currentOption = $this.attr('data-categories');
 
 					$itemsFilter.find('a').removeClass('active');
 					$this.addClass('active');
-					
+
 					if (currentOption) {
 						if (currentOption !== '*') {
 							currentOption = currentOption.replace(currentOption, '.' + currentOption);
@@ -970,14 +970,14 @@
 						}, function() {
 							if (currentOption == '*') {
 								$('.single-image', $cont).attr('rel', 'gallery');
-							} else { 
+							} else {
 								$(currentOption, $cont).find('.single-image').attr('rel', currentOption.substring(1));
 							}
 						});
 					}
 					e.preventDefault();
 				});
-				
+
 				$itemsFilter.find('a').first().addClass('active');
 			}
 
@@ -1008,8 +1008,8 @@
 			$('.container').each(function () {
 
 				var selectors = [
-					"iframe[src^='http://player.vimeo.com']",
-					"iframe[src^='http://www.youtube.com']",
+					"iframe[src^='https://player.vimeo.com']",
+					"iframe[src^='https://www.youtube.com']",
 					"object",
 					"embed"
 				], $allVideos = $(this).find(selectors.join(','));
@@ -1068,7 +1068,7 @@
 							elements.each(function (i, val) {
 								$(val).removeClass('loader');
 							});
-						});						
+						});
 					},
 					loader: function () {
 						elements.each(function (i, val) {
@@ -1081,7 +1081,7 @@
 				methods.init();
 
 			};
-			
+
 			$.preloader.defaults = {speed : 250};
 
 			$.fn.preloader = function (options) {
@@ -1108,35 +1108,35 @@
 
 			if ($('.detail-box').length && $('.transform').length) {
 
-				var box = $('.detail-box'), 
+				var box = $('.detail-box'),
 					methods = {},
 					empty = function (mixed_var) {
 						return (mixed_var === "" || mixed_var === 0 || mixed_var === "0" || mixed_var === null  || mixed_var === false  ||  mixed_var.length === 0);
 					}
-					
+
 				methods = {
 					colorState: function (elem, color) {
 						$(elem).addClass('stateColor').children('.transform').css({
 							backgroundColor: color
-						});					
+						});
 					},
 					colorHover : function (el, color) {
-						
+
 						var elem = $(el).children('.transform'),
 							colorState = methods.getState(elem),
 							colorHover = methods.getHover(elem);
-							
+
 						if (!empty(colorHover) && empty(colorState)) {
-							
+
 						} else if (!empty(colorState)) {
 							$(el).css({
 								backgroundColor: color
-							});							
+							});
 						}
 
 					},
 					eventOnHover : function () {
-						
+
 						box.on('mouseenter', function () {
 							var el = $(this);
 							methods.removeState(el);
@@ -1145,28 +1145,28 @@
 								elem = el.children('.transform'),
 								colorState = methods.getState(elem),
 								colorHover = methods.getHover(elem);
-	
+
 							if (!empty(colorState) && empty(colorHover)) {
 								methods.colorState(el, colorState);
 							} else if (!empty(colorHover) && !empty(colorState)) {
-								elem.css(methods.objHover);	
+								elem.css(methods.objHover);
 							} else if (empty(colorState) && empty(colorHover)) {
 								el.removeClass('defaultState');
 								elem.css(methods.objState);
 							} else if (!empty(colorHover) && empty(colorState)) {
 								el.removeClass('stateColor');
 							}
-							
+
 						});
-						
+
 					},
 					objState : {
 						'height' : 0,
-						'opacity': 0							
+						'opacity': 0
 					},
 					objHover : {
 						'height' : '100%',
-						'opacity': 1	
+						'opacity': 1
 					},
 					getState : function (el) {
 						return el.data('color-state');
@@ -1175,19 +1175,19 @@
 						return el.data('color-hover');
 					},
 					removeState : function (elem) {
-						
+
 						if (!empty(elem)) {
-							
+
 							var el = elem.children('.transform'),
 								attrState = methods.getState(el),
 								attrHover = methods.getHover(el);
-								
+
 							if (!empty(attrState) && empty(attrHover)) {
-							
+
 								if (elem.hasClass('stateColor')) {
 									elem.removeClass('stateColor');
 								}
-								
+
 							} else if (!empty(attrState) && !empty(attrHover)) {
 								el.css(methods.objState);
 							} else if (!empty(attrHover) && empty(attrState)) {
@@ -1196,17 +1196,17 @@
 								elem.addClass('defaultState');
 								el.css(methods.objHover);
 							}
-							
+
 						}
-						
+
 					},
 					init : function () {
 						this.eventOnHover();
 					}
 				}
-				
-				methods.init();			
-				
+
+				methods.init();
+
 				box.each(function (idx, val) {
 
 					var el = $(val).children('.transform'),
@@ -1220,9 +1220,9 @@
 						if (!empty(attrHover)) {
 							methods.colorHover(val, attrHover);
 						}
-						
+
 				});
-				
+
 			}
 
 		}());
@@ -1259,7 +1259,7 @@
 				var $gmap = $('.google_map'), mapType;
 
 				/* Maptype:
-				 google.maps.MapTypeId.ROADMAP 
+				 google.maps.MapTypeId.ROADMAP
 				 google.maps.MapTypeId.SATELLITE
 				google.maps.MapTypeId.HYBRID
 				 google.maps.MapTypeId.TERRAIN */
@@ -1283,8 +1283,8 @@
 		(function () {
 
 			$.ajaxnav = function(el) {
-				
-				var element = $(el), 
+
+				var element = $(el),
 					methods = {};
 
 				methods = {

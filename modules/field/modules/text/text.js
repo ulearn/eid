@@ -12,9 +12,9 @@ Drupal.behaviors.textSummary = {
 
       $summaries.once('text-summary-wrapper').each(function(index) {
         var $summary = $(this);
-        var $summaryLabel = $summary.find('label').first();
+        var $summaryLabel = $summary.find('label');
         var $full = $widget.find('.text-full').eq(index).closest('.form-item');
-        var $fullLabel = $full.find('label').first();
+        var $fullLabel = $full.find('label');
 
         // Create a placeholder label when the field cardinality is
         // unlimited or greater than 1.
@@ -23,28 +23,24 @@ Drupal.behaviors.textSummary = {
         }
 
         // Setup the edit/hide summary link.
-        var $link = $('<span class="field-edit-link">(<a class="link-edit-summary" href="#">' + Drupal.t('Hide summary') + '</a>)</span>');
-        var $a = $link.find('a');
-        var toggleClick = true;
-        $link.bind('click', function (e) {
-          if (toggleClick) {
+        var $link = $('<span class="field-edit-link">(<a class="link-edit-summary" href="#">' + Drupal.t('Hide summary') + '</a>)</span>').toggle(
+          function () {
             $summary.hide();
-            $a.html(Drupal.t('Edit summary'));
-            $link.appendTo($fullLabel);
-          }
-          else {
+            $(this).find('a').html(Drupal.t('Edit summary')).end().appendTo($fullLabel);
+            return false;
+          },
+          function () {
             $summary.show();
-            $a.html(Drupal.t('Hide summary'));
-            $link.appendTo($summaryLabel);
+            $(this).find('a').html(Drupal.t('Hide summary')).end().appendTo($summaryLabel);
+            return false;
           }
-          toggleClick = !toggleClick;
-          return false;
-        }).appendTo($summaryLabel);
+        ).appendTo($summaryLabel);
 
         // If no summary is set, hide the summary field.
         if ($(this).find('.text-summary').val() == '') {
           $link.click();
         }
+        return;
       });
     });
   }

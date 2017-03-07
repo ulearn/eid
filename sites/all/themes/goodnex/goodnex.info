@@ -35,7 +35,6 @@ scripts[] = js/flexslider/js/jquery.flexslider-min.js
 scripts[] = js/config.js
 scripts[] = js/custom.js
 scripts[] = js/jquery.themepunch.plugins.min.js
-scripts[] = js/jquery.themepunch.revolution.js
 scripts[] = js/jquery.themepunch.revolution.min.js
 
 

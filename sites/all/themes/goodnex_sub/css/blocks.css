@@ -1,6 +1,46 @@
 /* ------------------------------------------------------
   Blocks - Mainly referring to BlockTheme / BlockClass Classes
 ------------------------------------------------------ */
+/*Refer-A-Friend*/
+ @media only screen and (min-width: 480px) and (max-width: 767px) {
+.refer {
+padding: 10px 20px; 
+	}
+}
+
+@media only screen and (min-width: 80px) and (max-width: 767px) {
+.refer {
+padding: 5px 10px;
+	}
+}
+.refer {
+background: #595959; 
+-moz-border-radius: 5px; 
+-webkit-border-radius: 5px; 
+border-radius: 5px; 
+padding: 15px 28px; 
+position: relative; 
+color: #ebebeb;
+font-family: 'Dakota';
+}
+
+.refer .block-title{
+float: left;
+color: #ebebeb;
+font-family: 'Dakota';
+}
+
+.widget-title {
+color: #ebebeb;
+}
+
+.video-title {
+color: #6f6f6f;
+}
+#sidebar.widget-title {
+color: #ebebeb;
+}
+
 
 /*Padding*/
 .myblock{
@@ -13,6 +53,8 @@ padding-top: 12px;
 }
 
 /*Language Switcher Block*/
+
+
 
 /*Webform - SideBar Question Form*/
 .myform {
@@ -39,6 +81,7 @@ color: #ebebeb;
 .video-title {
 color: #6f6f6f;
 }
+
 #sidebar.widget-title {
 color: #ebebeb;
 }

@@ -105,7 +105,7 @@ function xmlsitemap_sitemap_list_form() {
     '#type' => 'tableselect',
     '#header' => $header,
     '#options' => $options,
-    '#empty' => t('No XML sitemaps available.') . ' ' . l('Add a new XML sitemap', 'admin/config/search/xmlsitemap/add'),
+    '#empty' => t('No XML sitemaps available.') . ' ' . l(t('Add a new XML sitemap'), 'admin/config/search/xmlsitemap/add'),
   );
   return $form;
 }
@@ -347,6 +347,12 @@ function xmlsitemap_settings_form($form, &$form_state) {
     '#type' => 'checkbox',
     '#title' => t('Enable developer mode to expose additional settings.'),
     '#default_value' => variable_get('xmlsitemap_developer_mode', 0),
+  );
+  $form['advanced']['xmlsitemap_disable_cron_regeneration'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Disable cron generation of sitemap files.'),
+    '#default_value' => variable_get('xmlsitemap_disable_cron_regeneration', 0),
+    '#description' => t('This can be disabled if other methods are being used to generate the sitemap files, like <em>drush xmlsitemap-regenerate</em>.'),
   );
 
   $form['xmlsitemap_settings'] = array(
