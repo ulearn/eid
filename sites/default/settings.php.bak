@@ -210,7 +210,21 @@
  *   );
  * @endcode
  */
-$databases = array();
+$databases = array (
+  'default' => 
+  array (
+    'default' => 
+    array (
+      'database' => 'stageeid',
+      'username' => 'stageeid',
+      'password' => 'Aracna5bia!',
+      'host' => 'stageeid.db.13303232.hostedresource.com',
+      'port' => '',
+      'driver' => 'mysql',
+      'prefix' => '',
+    ),
+  ),
+);
 
 /**
  * Access control for update.php script.
@@ -242,7 +256,7 @@ $update_free_access = FALSE;
  *   $drupal_hash_salt = file_get_contents('/home/example/salt.txt');
  *
  */
-$drupal_hash_salt = '';
+$drupal_hash_salt = 'e4Fi3oZ2s-fAVhHqXKCXy4pnitWKjMjmCM7jPdEzrp8';
 
 /**
  * Base URL (optional).
